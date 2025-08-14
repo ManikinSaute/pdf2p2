@@ -16,15 +16,21 @@ function pdf2p2_register_cpts() {
                 'name'          => $labels['plural'],
                 'singular_name' => $labels['singular'],
             ],
-            'public'        => ( $slug === 'pdf2p2_gutenberg' ),
-            'show_in_menu'  => ( $slug === 'pdf2p2_gutenberg' ),
-            'show_ui'       => true,
-            'has_archive'   => false,
+            'public'        => true, // ( $slug === 'pdf2p2_gutenberg' ),
+            'show_in_menu'  => true, // ( $slug === 'pdf2p2_gutenberg' ),
+            'show_ui'            => true,
+            'show_in_menu'       => true,
+            'show_in_admin_bar'  => true,
+            'show_in_nav_menus'  => true,
+            'publicly_queryable' => true,
+            'exclude_from_search'=> false,
             'menu_position' => 20,
             'supports'      => [ 'title', 'editor', 'custom-fields' ],
-            'show_in_rest'  => ( $slug === 'pdf2p2_gutenberg' ),
+            'show_in_rest'  => true, // ( $slug === 'pdf2p2_gutenberg' ),
             'menu_icon'     => 'dashicons-media-document',
             'taxonomies'    => [ 'status' ],
+            'capability_type'    => 'post',
+            'map_meta_cap'       => true,
         ];
 
         register_post_type( $slug, $args );
@@ -77,15 +83,15 @@ add_action( 'admin_init', function() {
     foreach ( $post_types as $pt ) {
         // — existing status column —
         add_filter( "manage_{$pt}_posts_columns", function( $cols ) {
-            $cols['minstral_processed'] = __( 'OCR Processed', 'pdf2p2' );
+            $cols['mistral_processed'] = __( 'OCR Processed', 'pdf2p2' );
             return $cols;
         } );
         add_action( "manage_{$pt}_posts_custom_column", function( $column, $post_id ) {
 
 
             // our new column output
-            if ( 'minstral_processed' === $column ) {
-                $done = get_post_meta( $post_id, 'minstral_processed', true );
+            if ( 'mistral_processed' === $column ) {
+                $done = get_post_meta( $post_id, 'mistral_processed', true );
                 // show Yes/No or a checkmark
                 echo $done
                     ? '<span style="color:green;">✓</span>'

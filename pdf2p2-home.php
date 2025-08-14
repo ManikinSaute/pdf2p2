@@ -1,12 +1,12 @@
 <?php
 
 function render_pdf2p2_home_page() {
-	$settings_url   = admin_url('admin.php?page=pdf2p2_settings');
-	$feed_url       = admin_url('admin.php?page=pdf2p2_rss_feed');
-	$import_url     = admin_url('admin.php?page=pdf2p2_import');
-	$imported_url   = admin_url('edit.php?post_type=pdf2p2_import');
+	$settings_url   = admin_url('admin.php?page=pdf2p2-settings');
+	$feed_url       = admin_url('admin.php?page=pdf2p2-rss-feed');
+	$import_url     = admin_url('admin.php?page=pdf2p2-import');
+	$imported_url   = admin_url('edit.php?post_type=pdf2p2-import');
 	$md_convert_url = admin_url('admin.php?page=pdf2p2-md-convert');
-	$gutenberg_url  = admin_url('edit.php?post_type=pdf2p2_gutenberg');
+	$gutenberg_url  = admin_url('edit.php?post_type=pdf2p2-gutenberg');
 	$github_url	= 'https://github.com/ManikinSaute/pdf2p2';
 
 	echo '<div class="wrap">';

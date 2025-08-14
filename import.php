@@ -9,15 +9,15 @@ if ( ! defined( 'ABSPATH' ) ) {
  * @param string[] $urls
  * @param bool     $force Skip duplicate check when true.
  */
+
 function pdf2p2_process_pdf_urls( array $urls, $force = false ) {
     require_once ABSPATH . 'wp-admin/includes/file.php';
     require_once ABSPATH . 'wp-admin/includes/media.php';
     require_once ABSPATH . 'wp-admin/includes/image.php';
-
+    pdf2p2_log( 'Import.php — batch started ', 'INFO' );
     foreach ( $urls as $pdf_url ) {
         $file_name = wp_basename( $pdf_url );
-
-        // Duplicate check
+        pdf2p2_log( sprintf( 'Processing URL: %s', $pdf_url ), 'INFO' );
         $existing = get_posts( [
             'post_type'   => 'pdf2p2_import',
             'numberposts' => 1,
@@ -28,6 +28,10 @@ function pdf2p2_process_pdf_urls( array $urls, $force = false ) {
             ],
         ] );
         if ( $existing && ! $force ) {
+            pdf2p2_log( 
+                sprintf( 'import.php — skipped already exists: %s', $file_name ), 
+                'INFO' 
+                );
             echo '<div class="notice notice-warning"><p>'
                . sprintf(
                    esc_html__( 'Skipped import for %s: already exists.', 'pdf2p2' ),
@@ -37,9 +41,12 @@ function pdf2p2_process_pdf_urls( array $urls, $force = false ) {
             continue;
         }
 
-        // Download
         $tmp_file = download_url( $pdf_url );
         if ( is_wp_error( $tmp_file ) ) {
+            pdf2p2_log( 
+                sprintf( 'import.php — wp error : %s', $pdf_url ), 
+                'ERROR' 
+                );
             echo '<div class="notice notice-error"><p>'
                . sprintf(
                    esc_html__( 'Error downloading %s: %s', 'pdf2p2' ),
@@ -50,10 +57,13 @@ function pdf2p2_process_pdf_urls( array $urls, $force = false ) {
             continue;
         }
 
-        // Sideload
         $file_array = [ 'name' => $file_name, 'tmp_name' => $tmp_file ];
         $attach_id  = media_handle_sideload( $file_array, 0 );
         if ( is_wp_error( $attach_id ) ) {
+                pdf2p2_log( 
+                    sprintf( 'import.php — wp error side load : %s', $pdf_url ), 
+                    'ERROR' 
+                    );
             @unlink( $file_array['tmp_name'] );
             echo '<div class="notice notice-error"><p>'
                . sprintf(
@@ -65,28 +75,30 @@ function pdf2p2_process_pdf_urls( array $urls, $force = false ) {
             continue;
         }
 
-        // Compute hash & create import post
         $file_path  = get_attached_file( $attach_id );
         $file_hash  = hash_file( 'sha256', $file_path );
         $attach_url = wp_get_attachment_url( $attach_id );
-
         $md_file = plugin_dir_path( __FILE__ ) . 'md-example.txt';
 
         if ( file_exists( $md_file ) ) {
-            // Read the whole file
             $content = file_get_contents( $md_file );
         } else {
             $content = 'OCR content';
+            pdf2p2_log( 'Import.php — md file not found ', 'WARNING' );
         }
 
         $post_id = wp_insert_post( [
             'post_title'   => $file_name,
             'post_content' => $content,
-            'post_status'  => 'published',
+            'post_status'  => 'publish',
             'post_type'    => 'pdf2p2_import',
         ] );
 
         if ( ! is_wp_error( $post_id ) ) {
+                pdf2p2_log( 
+                    sprintf( 'import.php — all good in the hood : %s', $file_name ), 
+                    'SUCCESS' 
+                    );
             wp_set_object_terms( $post_id, 'un_verified', 'status', true );
             update_post_meta( $post_id, 'pdf2p2_original_file_path', $pdf_url );
             update_post_meta( $post_id, 'pdf2p2_new_file_url',      $attach_url );
@@ -94,7 +106,7 @@ function pdf2p2_process_pdf_urls( array $urls, $force = false ) {
             update_post_meta( $post_id, 'pdf2p2_attachment_id',     $attach_id );
             update_post_meta( $post_id, 'pdf2p2_file_hash',         $file_hash );
             update_post_meta( $post_id, 'pdf2p2_file_name',         $file_name );
-            update_post_meta( $post_id, 'minstral_processed',       '0' );
+            update_post_meta( $post_id, 'mistral_processed',       '0' );
 
             echo '<div class="notice notice-success"><p>'
                . sprintf(
@@ -104,6 +116,10 @@ function pdf2p2_process_pdf_urls( array $urls, $force = false ) {
                )
                . '</p></div>';
         } else {
+            pdf2p2_log( 
+                sprintf( 'import.php — wp error creating post: %s', $file_name ), 
+                'ERROR' 
+                );
             echo '<div class="notice notice-error"><p>'
                . sprintf(
                    esc_html__( 'Error creating import post for %s: %s', 'pdf2p2' ),
@@ -111,13 +127,11 @@ function pdf2p2_process_pdf_urls( array $urls, $force = false ) {
                    esc_html( $post_id->get_error_message() )
                )
                . '</p></div>';
+               pdf2p2_log( 'Import.php — file processing error ', 'ERROR' );
         }
     }
 }
 
-/**
- * Render the admin import page.
- */
 function pdf2p2_render_import_page() {
     ?>
     <div class="wrap">
@@ -150,13 +164,12 @@ function pdf2p2_render_import_page() {
     <?php
 
     if ( isset( $_POST['pdf_url_submit'] ) && wp_verify_nonce( $_POST['pdf2p2_nonce'], 'pdf2p2_upload' ) ) {
-        // Grab & sanitize lines
+        
+        pdf2p2_log( 'Import.php — submit clicked.', 'INFO' );
         $raw   = sanitize_textarea_field( $_POST['pdf_urls'] );
         $lines = preg_split( '/\r\n|\r|\n/', trim( $raw ) );
         $urls  = array_filter( array_map( 'esc_url_raw', $lines ) );
         $force = ! empty( $_POST['force_import'] );
-
-        // Delegate to our shared import function
         pdf2p2_process_pdf_urls( $urls, $force );
     }
 

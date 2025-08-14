@@ -26,10 +26,11 @@ require_once __DIR__ . '/cron.php';
 require_once __DIR__ . '/pdf2p2-home.php'; 
 require_once __DIR__ . '/md-gb.php';
 require_once __DIR__ . '/default-content.php';
-require_once __DIR__ . '/minstral.php';
-require_once __DIR__ . '/minstral-send.php';
+require_once __DIR__ . '/mistral.php';
+require_once __DIR__ . '/mistral-send.php';
 require_once __DIR__ . '/pdf2p2-templates.php';
 require_once __DIR__ . '/import_with_ocr.php';
+require_once __DIR__ . '/run-scripts.php';
 register_activation_hook( __FILE__, 'pdf2p2_activate' );
 
 add_action( 'init', function() {

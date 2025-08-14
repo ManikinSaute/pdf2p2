@@ -89,7 +89,7 @@ get_header();
                     // OCR Processed flag
                     ?>
                     <p><strong><?php esc_html_e( 'OCR Processed:', 'text-domain' ); ?></strong> 
-                        <?php echo get_post_meta( get_the_ID(), 'minstral_processed', true ) ? esc_html__( 'Yes', 'text-domain' ) : esc_html__( 'No', 'text-domain' ); ?>
+                        <?php echo get_post_meta( get_the_ID(), 'mistral_processed', true ) ? esc_html__( 'Yes', 'text-domain' ) : esc_html__( 'No', 'text-domain' ); ?>
                     </p>
                     <?php
                     // Status taxonomy

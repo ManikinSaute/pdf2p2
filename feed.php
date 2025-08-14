@@ -14,11 +14,26 @@ if ( ! defined( 'ABSPATH' ) ) {
 function pdf2p2_get_not_imported_feed_urls( $feed_url = '' ) {
     if ( empty( $feed_url ) || ! filter_var( $feed_url, FILTER_VALIDATE_URL ) ) {
         $feed_url = 'https://www.amnesty.org/en/latest/feed/';
-    }
+        pdf2p2_log( 
+            sprintf(
+                'Feed.php — No valid feed URL set; using default: ' . $feed_url,
+                'WARNING'
+            )
+        );
+        } else {
+            pdf2p2_log(
+                'Feed.php — Using configured feed URL: ' . $feed_url,
+                'INFO'
+            );
+        }
 
     $response = wp_remote_get( $feed_url );
     if ( is_wp_error( $response ) ) {
-        return [];
+            pdf2p2_log(
+                'Feed.php — HTTP request failed: ' . $response->get_error_message(),
+                'ERROR'
+            );
+            return [];
     }
 
     $body = wp_remote_retrieve_body( $response );
@@ -28,7 +43,6 @@ function pdf2p2_get_not_imported_feed_urls( $feed_url = '' ) {
         return [];
     }
 
-    // Determine RSS vs Atom
     if ( isset( $xml->channel->item ) && count( $xml->channel->item ) ) {
         $items = $xml->channel->item;
     } elseif ( isset( $xml->entry ) && count( $xml->entry ) ) {
@@ -37,7 +51,6 @@ function pdf2p2_get_not_imported_feed_urls( $feed_url = '' ) {
         return [];
     }
 
-    // Already-imported
     $posts = get_posts( [
         'post_type'      => [ 'pdf2p2_import', 'pdf2p2_gutenberg' ],
         'posts_per_page' => -1,
@@ -52,8 +65,11 @@ function pdf2p2_get_not_imported_feed_urls( $feed_url = '' ) {
         }
     }
     $imported = array_unique( $imported );
+    pdf2p2_log(
+        'Feed.php — Found ' . count( $imported ) . ' already-imported PDFs',
+        'INFO'
+    );
 
-    // All PDF URLs in feed
     $feed_paths = [];
     foreach ( $items as $item ) {
         if ( isset( $item->guid ) ) {
@@ -71,14 +87,19 @@ function pdf2p2_get_not_imported_feed_urls( $feed_url = '' ) {
         }
     }
     $feed_paths = array_unique( $feed_paths );
+        pdf2p2_log(
+            'Feed.php — Found ' . count( $feed_paths ) . ' total PDFs in feed',
+            'INFO'
+        );
 
-    // Return only those not yet imported
-    return array_diff( $feed_paths, $imported );
+    $not_imported = array_diff( $feed_paths, $imported );
+    pdf2p2_log(
+        'Feed.php — Returning ' . count( $not_imported ) . ' not-yet-imported PDFs',
+        'INFO'
+    );
+    return $not_imported;
 }
 
-/**
- * Render the RSS/Atom–based import feed admin page.
- */
 function pdf2p2_render_rss_feed() {
     $feed_url = trim( get_option( 'pdf2p2_import_rssfeed_url', '' ) );
     if ( empty( $feed_url ) || ! filter_var( $feed_url, FILTER_VALIDATE_URL ) ) {
@@ -129,7 +150,6 @@ function pdf2p2_render_rss_feed() {
     }
     $imported_paths = array_unique( $imported_paths );
 
-    // Extract ALL PDF URLs
     $feed_paths = [];
     foreach ( $items as $item ) {
         if ( isset( $item->guid ) ) {
@@ -147,18 +167,12 @@ function pdf2p2_render_rss_feed() {
         }
     }
     $feed_paths = array_unique( $feed_paths );
-
-    // Difference: not yet imported
     $not_imported = array_diff( $feed_paths, $imported_paths );
-
-    // Render
     echo '<div class="wrap">';
     echo '<h1>RSS/Atom Feed</h1>';
     echo '<p><strong>Feed URL:</strong> '
        . '<a href="' . esc_url( $feed_url ) . '" target="_blank">'
        . esc_html( $feed_url ) . '</a></p>';
-
-    // A) All feed PDFs
     echo '<h2>All PDF File Paths in Feed</h2>';
     if ( $feed_paths ) {
         echo '<ul style="list-style:disc inside;">';
@@ -169,8 +183,6 @@ function pdf2p2_render_rss_feed() {
     } else {
         echo '<p>No PDF URLs found in feed.</p>';
     }
-
-    // B) Already imported (including pdf2p2_guttenberg)
     echo '<h2 style="margin-top:2em;">Already Imported PDFs</h2>';
     if ( $imported_paths ) {
         echo '<ul style="list-style:disc inside;">';
@@ -184,39 +196,23 @@ function pdf2p2_render_rss_feed() {
                 echo ' &mdash; <strong>' . esc_html( $title ) . '</strong>';
                 echo ' <em>(' . esc_html( $post_type ) . ')</em>';
                 echo '</li>';
+                // echo '<pre>'; var_dump( $imported_posts[0] ); echo '</pre>';
+            } else {
+                echo '<li><code>' . esc_html( $post->ID ) . '</code> (no path found)</li>';
             }
         }
         echo '</ul>';
     } else {
         echo '<p>No files have been imported yet.</p>';
     }
-
-    // C) Not yet imported + bulk‐import form
     echo '<h2 style="margin-top:2em;">Feed PDFs Not Yet Imported</h2>';
     if ( $not_imported ) {
         echo '<ul style="list-style:disc inside;">';
         foreach ( $not_imported as $url ) {
             echo '<li><code>' . esc_html( $url ) . '</code></li>';
         }
-        echo '</ul>';
-
-        echo '<form method="post" action="'
-           . esc_url( menu_page_url( 'pdf2p2_import', false ) )
-           . '">';
-        wp_nonce_field( 'pdf2p2_upload', 'pdf2p2_nonce' );
-        echo '<textarea name="pdf_urls" style="display:none;">'
-           . esc_textarea( implode( "\n", $not_imported ) )
-           . '</textarea>';
-        echo '<input type="hidden" name="force_import" value="0" />';
-        echo '<p><button type="submit" name="pdf_url_submit" class="button button-primary">'
-           . 'Import All Pending PDFs'
-           . '</button></p>';
-        echo '</form>';
     } else {
         echo '<p>All feed PDFs have already been imported.</p>';
     }
-
     echo '</div>';
 }
-
-

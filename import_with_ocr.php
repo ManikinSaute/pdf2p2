@@ -3,6 +3,9 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
+
+// I think this file is no longer needed, as the functionality has been moved to import_with_ocr.php
+
 function pdf2p2_process_and_ocr_pdf_urls( array $urls, $force = false ) {
     require_once ABSPATH . 'wp-admin/includes/file.php';
     require_once ABSPATH . 'wp-admin/includes/media.php';
