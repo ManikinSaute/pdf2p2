@@ -98,7 +98,7 @@ function pdf2p2_api_key_field_cb() {
     );
 
     if ( $key ) {
-        echo '<p class="description">An API key is already saved.</p>';
+        echo '<p class="description">An API key is already saved, the length is not indicated by the obsficated value shown.</p>';
     } else {
         echo '<p class="description">Enter your OCR service API key.</p>';
     }
@@ -108,7 +108,7 @@ function pdf2p2_import_rssfeed_url_field_cb() {
     $pdf2p2_import_rssfeed_url = get_option( 'pdf2p2_import_rssfeed_url', '' );
     printf(
         '<input type="url" id="pdf2p2_import_rssfeed_url" name="pdf2p2_import_rssfeed_url" value="%s" class="regular-text" />'
-        . '<p class="description">Enter your import RSS feed here. <br /> Leaving this blank can cause issues https://www.amnesty.org/en/latest/feed/.</p>',
+        . '<p class="description">Enter your import RSS feed here. <br /> Leaving this blank can cause issues, these are example feeds https://www.amnesty.org/en/latest/feed/ or https://feeds.bbci.co.uk/news/rss.xml .</p>',
         esc_attr( $pdf2p2_import_rssfeed_url )
     );
 }
@@ -119,6 +119,8 @@ function pdf2p2_total_docs_field_cb() {
         '<input type="number" min="0" name="pdf2p2_total_docs" value="%s" class="regular-text" />',
         esc_attr( $total )
     );
+    echo '<p class="description">This could be used if you had a target number of documents, current not used anywhere.</p>';
+
 }
 
 function pdf2p2_cron_schedule_field_cb() {
@@ -134,7 +136,7 @@ function pdf2p2_cron_schedule_field_cb() {
         );
     }
     echo '</select>';
-    echo '<p class="description">Select how often to run the ingestion job.</p>';
+    echo '<p class="description">Select how often to run the ingestion job. This can be shortened by adding a new cron with a plugin such as WP Crontrol by John Blackbourn.</p>';
 }
 
 function pdf2p2_debug_mode_cb() {
@@ -147,7 +149,7 @@ function pdf2p2_debug_mode_cb() {
         <p class="description">%s</p>',
         checked( 1, $enabled, false ),              
         esc_html__( 'Enable debug mode', 'pdf2p2' ), 
-        esc_html__( 'Toggle pdf2p2 debug logging on or off.', 'pdf2p2' ) 
+        esc_html__( 'Toggle pdf2p2 debug logging on or off. Turning this on will show some admin notices on this page', 'pdf2p2' ) 
     );
 }
 
@@ -182,7 +184,7 @@ function pdf2p2_render_settings_page() {
     // The actual form
     ?>
     <div class="wrap">
-      <h1>pdf2p2 Settings</h1>
+      <h1>Edit Settings</h1>
       <form method="post" action="options.php">
         <?php
           settings_fields(   'pdf2p2_settings_group' );

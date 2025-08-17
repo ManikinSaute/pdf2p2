@@ -84,15 +84,13 @@ add_action( 'admin_init', function() {
         // — existing status column —
         add_filter( "manage_{$pt}_posts_columns", function( $cols ) {
             $cols['mistral_processed'] = __( 'OCR Processed', 'pdf2p2' );
+            $cols['html_processed']    = __( 'HTML Processed', 'pdf2p2' );
+            $cols['gb_processed']      = __( 'GB Processed', 'pdf2p2' );
             return $cols;
         } );
         add_action( "manage_{$pt}_posts_custom_column", function( $column, $post_id ) {
-
-
-            // our new column output
-            if ( 'mistral_processed' === $column ) {
-                $done = get_post_meta( $post_id, 'mistral_processed', true );
-                // show Yes/No or a checkmark
+          if ( in_array( $column, [ 'mistral_processed', 'html_processed', 'gb_processed' ], true ) ) {
+                $done = get_post_meta( $post_id, $column, true );
                 echo $done
                     ? '<span style="color:green;">✓</span>'
                     : '<span style="color:red;">✕</span>';

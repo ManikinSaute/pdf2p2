@@ -29,6 +29,38 @@ function pdf2p2_get_unprocessed_post_ids( array $post_types = [ 'pdf2p2_import',
     return array_map( 'intval', get_posts( $args ) );
 }
 
+function pdf2p2_get_processed_post_ids(
+    array $post_types = [ 'pdf2p2_import', 'pdf2p2_gutenberg' ],
+    int $limit = 20,
+    string $orderby = 'date',
+    string $order = 'DESC'
+) : array {
+    $orderby = ( $orderby === 'modified' ) ? 'modified' : 'date';
+    $order   = ( strtoupper( $order ) === 'ASC' ) ? 'ASC' : 'DESC';
+
+    $args = [
+        'post_type'               => $post_types,
+        'post_status'             => 'any',
+        'posts_per_page'          => $limit,
+        'fields'                  => 'ids',
+        'orderby'                 => $orderby,
+        'order'                   => $order,
+        'no_found_rows'           => true,
+        'update_post_meta_cache'  => false,
+        'update_post_term_cache'  => false,
+        'ignore_sticky_posts'     => true,
+        'suppress_filters'        => true,
+        'meta_query'              => [[
+            'key'     => 'mistral_processed',
+            'value'   => 1,               
+            'type'    => 'NUMERIC',
+            'compare' => '='
+        ]],
+    ];
+
+    return array_map( 'intval', get_posts( $args ) );
+}
+
 add_action('rest_api_init', function () {
     register_rest_route('pdf2p2/v1', '/check-files', [
         'methods'  => 'POST',
@@ -39,27 +71,39 @@ add_action('rest_api_init', function () {
     ]);
 });
 
-// I dont really need this 
 
 function pdf2p2_render_mistral_page() {
     echo '<div class="wrap">';
-    echo '<h1>pdf2p&sup2; Check files</h1>';
-    echo '<p>This tell us what has or has not been processed by the OCR tool.</p>';
+    echo '<h1>Check Posts</h1>';
+    echo '<p>This page tell us what has or has not been processed by the OCR tool.</p>';
+    echo '<h2>Processed Posts</h2>';
+
+    $processed = pdf2p2_get_processed_post_ids();
+    if ( ! empty( $processed ) ) {
+        echo '<p>The latest 20 processed posts will are shown below.</p>';
+        foreach ( $processed as $post_id ) {
+            echo '<li>' . esc_html( get_the_title( $post_id ) ) . ' (ID: ' . esc_html( $post_id ) . ')</li>';
+        }
+        echo '</ul>';
+
+        } else {
+            echo '<p>There are no processed files to display.</p>';
+        }
+    echo '<h2>Unprocessed Posts</h2>';
 
     $unprocessed = pdf2p2_get_unprocessed_post_ids();
     if ( ! empty( $unprocessed ) ) {
-        echo '<p>Unprocessed file/s</p>';
+        echo '<p>Unprocessed posts will are shown below.</p>';
         foreach ( $unprocessed as $post_id ) {
             echo '<li>' . esc_html( get_the_title( $post_id ) ) . ' (ID: ' . esc_html( $post_id ) . ')</li>';
         }
         echo '</ul>';
 
         } else {
-            echo '<p>No unprocessed files</p>';
+            echo '<p>There are no unprocessed files to display.</p>';
         }
 
-        echo '<div class="wrap">';
-        echo '<h2>Check a file</h2>';
+        echo '<h2>Check A Post</h2>';
         echo '<p>Enter one or more post IDs (comma-separated):</p>';
         echo '<form method="post" style="margin-top:20px;">';
         echo '  <label for="check_post_ids">Post IDs:</label> ';
@@ -75,6 +119,7 @@ function pdf2p2_render_mistral_page() {
             $parts = array_filter( array_map( 'intval', explode( ',', $raw ) ) );
 
             foreach ( $parts as $post_id ) {
+                        pdf2p2_log( sprintf( 'mistral.php — button clicked with the following posts "%s"); .', $post_id ), 'INFO'  );
             }
         }
 

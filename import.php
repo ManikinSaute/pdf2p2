@@ -135,20 +135,25 @@ function pdf2p2_process_pdf_urls( array $urls, $force = false ) {
 function pdf2p2_render_import_page() {
     ?>
     <div class="wrap">
-      <h1>Import PDF(s)</h1>
-      <p>Enter one or more PDF URLs (one per line) to sideload into the Media Library, compute each SHA-256 hash, and then create an “Import” post for each.</p>
-      <p>not yet imported</p>
+      <h1>Import PDFs</h1>
+      <p>This page allows you to import PDF files from a list of URLs.</p>
+      <h2>Unimported</h2>
+      <p>Any unimported files will that are in your feed will be listed below.</p>
             <?
         $feed_url     = get_option( 'pdf2p2_import_rssfeed_url' );
         $not_imported = pdf2p2_get_not_imported_feed_urls( $feed_url );
         foreach ( $not_imported as $pdf_url ) {
             echo esc_html( $pdf_url ) . '<br>';
             } ?>
+
+
+      <h2>Import PDFs</h2>
+      <p>Enter one or more PDF URLs (one per line) this will create a post and sideload the PDF into the media library and also compute a SHA-256 hash for each file.</p>
       
       <form method="post">
         <?php wp_nonce_field( 'pdf2p2_upload', 'pdf2p2_nonce' ); ?>
 
-        <textarea name="pdf_urls" rows="5" style="width:400px;" placeholder="https://www.amnesty.org/en/wp-content/uploads/2025/07/EUR4401332025ENGLISH.pdf" required><?php
+        <textarea name="pdf_urls" rows="5" style="width:800px;" placeholder="https://www.amnesty.org/en/wp-content/uploads/2025/07/EUR4401332025ENGLISH.pdf" required><?php
           echo isset( $_POST['pdf_urls'] ) ? esc_textarea( $_POST['pdf_urls'] ) : '';
         ?></textarea>
 
@@ -164,14 +169,15 @@ function pdf2p2_render_import_page() {
     <?php
 
     if ( isset( $_POST['pdf_url_submit'] ) && wp_verify_nonce( $_POST['pdf2p2_nonce'], 'pdf2p2_upload' ) ) {
-        
-        pdf2p2_log( 'Import.php — submit clicked.', 'INFO' );
         $raw   = sanitize_textarea_field( $_POST['pdf_urls'] );
         $lines = preg_split( '/\r\n|\r|\n/', trim( $raw ) );
         $urls  = array_filter( array_map( 'esc_url_raw', $lines ) );
         $force = ! empty( $_POST['force_import'] );
         pdf2p2_process_pdf_urls( $urls, $force );
+        pdf2p2_log( 
+            sprintf( 'Import.php — submitted with URLs: %s', implode( ', ', $urls ) ), 
+            'INFO' 
+            );
     }
-
     echo '</div>';
 }

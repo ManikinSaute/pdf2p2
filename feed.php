@@ -169,11 +169,11 @@ function pdf2p2_render_rss_feed() {
     $feed_paths = array_unique( $feed_paths );
     $not_imported = array_diff( $feed_paths, $imported_paths );
     echo '<div class="wrap">';
-    echo '<h1>RSS/Atom Feed</h1>';
+    echo '<h1>View RSS/Atom Feed</h1>';
     echo '<p><strong>Feed URL:</strong> '
        . '<a href="' . esc_url( $feed_url ) . '" target="_blank">'
        . esc_html( $feed_url ) . '</a></p>';
-    echo '<h2>All PDF File Paths in Feed</h2>';
+    echo '<h2>All PDFs In Your XML Feed</h2>';
     if ( $feed_paths ) {
         echo '<ul style="list-style:disc inside;">';
         foreach ( $feed_paths as $url ) {
@@ -183,7 +183,16 @@ function pdf2p2_render_rss_feed() {
     } else {
         echo '<p>No PDF URLs found in feed.</p>';
     }
-    echo '<h2 style="margin-top:2em;">Already Imported PDFs</h2>';
+    echo '<h2>Unimported PDFs</h2>';
+    if ( $not_imported ) {
+        echo '<ul style="list-style:disc inside;">';
+        foreach ( $not_imported as $url ) {
+            echo '<li><code>' . esc_html( $url ) . '</code></li>';
+        }
+    } else {
+        echo '<p>No files to show, all PDFs in the feed have already been imported.</p>';
+    }
+        echo '<h2>Imported PDFs</h2>';
     if ( $imported_paths ) {
         echo '<ul style="list-style:disc inside;">';
         foreach ( $imported_posts as $post ) {
@@ -203,16 +212,7 @@ function pdf2p2_render_rss_feed() {
         }
         echo '</ul>';
     } else {
-        echo '<p>No files have been imported yet.</p>';
-    }
-    echo '<h2 style="margin-top:2em;">Feed PDFs Not Yet Imported</h2>';
-    if ( $not_imported ) {
-        echo '<ul style="list-style:disc inside;">';
-        foreach ( $not_imported as $url ) {
-            echo '<li><code>' . esc_html( $url ) . '</code></li>';
-        }
-    } else {
-        echo '<p>All feed PDFs have already been imported.</p>';
+        echo '<p>No files to show, no PDF files have been imported yet.</p>';
     }
     echo '</div>';
 }

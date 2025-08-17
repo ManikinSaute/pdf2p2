@@ -1,5 +1,4 @@
 <?php
-
 if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
@@ -89,41 +88,57 @@ function pdf2p2_send_post_to_mistral_ocr( $post_id ) {
                     pdf2p2_log( sprintf( 'mistral-send.php - Page %s: no images found', $idx ), 'INFO' );
                 }
 }
-
     if ( $new_content && $new_content !== $post->post_content ) {
         wp_update_post( [
             'ID'           => $post_id,
             'post_content' => wp_slash( $new_content ),
         ] );
     }
-
     update_post_meta( $post_id, 'mistral_processed', true );
     pdf2p2_log( sprintf( 'mistral-send.php — File %d processed successfully.', $file_url ), 'SUCCESS' );
     return true;
 }
 
-
 function pdf2p2_render_mistral_send_page() {
     echo '<div class="wrap">';
+    echo '<h1>Send Data To OCR</h1>';
+    echo '<p>This page allows you to send selected posts to the Mistral OCR service for processing.</p>';
+    echo '<h2>Processed Posts</h2>';
+    echo '<p>The latest 20 processed posts will show below.</p>';
 
-$unprocessed = pdf2p2_get_unprocessed_post_ids();
-if ( ! empty( $unprocessed ) ) {
-    foreach ( $unprocessed as $post_id ) {
-        printf(
-            '<p>Unprocessed: <a href="%1$s">%2$s</a> (ID %3$d)</p>',
-            esc_url( get_edit_post_link( $post_id ) ),
-            esc_html( get_the_title( $post_id ) ),
-            intval( $post_id )
-        );
+    $processed = pdf2p2_get_processed_post_ids();
+    if ( ! empty( $processed ) ) {
+        foreach ( $processed as $post_id ) {
+            printf(
+                '<p>Processed posts: <a href="%1$s">%2$s</a> (ID %3$d)</p>',
+                esc_url( get_edit_post_link( $post_id ) ),
+                esc_html( get_the_title( $post_id ) ),
+                intval( $post_id )
+            );
+        }
+    } else {
+        echo '<p>No unprocessed documents</p>';
     }
-} else {
-    echo '<p>' . esc_html__( 'No documents to process', 'pdf2p2' ) . '</p>';
-}
 
-    
-    echo '<h1>' . esc_html__( 'Send PDF to Mistral OCR', 'pdf2p2' ) . '</h1>';
-    echo '<p>' . esc_html__( 'Enter one or more post IDs (comma-separated):', 'pdf2p2' ) . '</p>';
+    echo '<h2>Unprocessed Posts</h2>';
+    echo '<p>Unprocessed posts will are shown below.</p>';
 
+    $unprocessed = pdf2p2_get_unprocessed_post_ids();
+    if ( ! empty( $unprocessed ) ) {
+        foreach ( $unprocessed as $post_id ) {
+            printf(
+                '<p>Unprocessed: <a href="%1$s">%2$s</a> (ID %3$d)</p>',
+                esc_url( get_edit_post_link( $post_id ) ),
+                esc_html( get_the_title( $post_id ) ),
+                intval( $post_id )
+            );
+        }
+    } else {
+        echo '<p>No documents to process</p>';
+    }
+
+    echo '<h2>Send Posts</h2>';
+    echo '<p>Add a post ID or many in CSV format.</p>';
     echo '<form method="post">';
     wp_nonce_field( 'pdf2p2_send_ocr', 'pdf2p2_send_ocr_nonce' );
     echo '<input type="text" name="send_mistral_post_ids" style="width:300px;" '
@@ -132,7 +147,6 @@ if ( ! empty( $unprocessed ) ) {
             ? esc_attr( $_POST['send_mistral_post_ids'] ) 
             : '' ) . '">';
     submit_button( __( 'Send to OCR', 'pdf2p2' ), 'primary', 'send_ocr' );
-
     echo '</form>';
 
     if ( ! empty( $_POST['send_ocr'] )
@@ -162,7 +176,5 @@ if ( ! empty( $unprocessed ) ) {
             echo '<p><em>' . esc_html__( 'No valid post IDs provided.', 'pdf2p2' ) . '</em></p>';
         }
     }
-
     echo '</div>';
 }
-

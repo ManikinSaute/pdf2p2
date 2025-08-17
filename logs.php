@@ -17,28 +17,27 @@ function pdf2p2_log( $message, $level = 'INFO' ) {
     error_log( $entry, 3, $file );
 }
 
-// Hook PHP warnings/notices into our log
 set_error_handler( function( $errno, $errstr, $errfile, $errline ) {
     $lvl = in_array( $errno, [E_WARNING, E_USER_WARNING], true ) ? 'WARNING' : 'ERROR';
     pdf2p2_log( "{$errstr} in {$errfile} on line {$errline}", $lvl );
-    return false; // Let WP handle it too if WP_DEBUG is on
+    return false; 
 } );
 
-/**
- * Render the Tools → PDF2P2 Logs page.
- */
 function pdf2p2_render_logs_page() {
     if ( ! current_user_can( 'manage_options' ) ) {
         return;
     }
+
     $upload   = wp_upload_dir();
     $log_file = trailingslashit( $upload['basedir'] ) . 'pdf2p2/logs/plugin.log';
-    // Clear log action
+
     if ( isset( $_POST['pdf2p2_clear_logs'] ) && check_admin_referer( 'pdf2p2_clear_logs' ) ) {
         file_put_contents( $log_file, '' );
         echo '<div class="notice notice-success"><p>Log file cleared.</p></div>';
     }
+
     echo '<div class="wrap"><h1>PDF2P2 Logs</h1>';
+
     if ( ! file_exists( $log_file ) ) {
         echo '<p>No log file found. Nothing has been logged yet.</p>';
     } else {
@@ -56,21 +55,26 @@ function pdf2p2_render_logs_page() {
                 echo '<span style="color:#c00;">' . esc_html( $line ) . '</span>' . "\n";
             } elseif ( strpos( $line, '[WARNING]' ) !== false ) {
                 echo '<span style="color:#e67e22;">' . esc_html( $line ) . '</span>' . "\n";
+            } elseif ( strpos( $line, '[INFO]' ) !== false ) {
+                echo '<span style="color:gray">' . esc_html( $line ) . '</span>' . "\n";
+            } elseif ( strpos( $line, '[SUCCESS]' ) !== false ) {
+                echo '<span style="color:green;">' . esc_html( $line ) . '</span>' . "\n";
             } else {
                 echo esc_html( $line ) . "\n";
             }
         }
         echo '</code></pre>';
     }
+
     echo '</div>';
 }
+
 
 add_action( 'admin_init', function() {
     if ( 1 !== (int) get_option( 'pdf2p2_debug_mode', 0 ) ) {
         return;
     }
     $page = isset( $_GET['page'] ) ? sanitize_key( $_GET['page'] ) : '';
-    // only on your settings or logs submenus
     if ( ! in_array( $page, [ 'pdf2p2-settings', 'pdf2p2-logs' ], true ) ) {
         return;
     }

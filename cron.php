@@ -14,8 +14,11 @@ function pdf2p2_activate() {
     if ( ! wp_next_scheduled( 'pdf2p2_cron_process_unprocessed' ) ) {
         wp_schedule_event( time(), $schedule, 'pdf2p2_cron_process_unprocessed' );
     }
-    if ( ! wp_next_scheduled( 'pdf2p2_cron_move_post_to_gutenberg' ) ) {
-        wp_schedule_event( time(), $schedule, 'pdf2p2_cron_move_post_to_gutenberg' );
+    if ( ! wp_next_scheduled( 'pdf2p2_cron_process_to_html' ) ) {
+        wp_schedule_event( time(), $schedule, 'pdf2p2_cron_process_to_html' );
+    }
+    if ( ! wp_next_scheduled( 'pdf2p2_cron_process_html_to_gb' ) ) {
+        wp_schedule_event( time(), $schedule, 'pdf2p2_cron_process_html_to_gb' );
     }
 }
 
@@ -23,7 +26,8 @@ register_deactivation_hook( __FILE__, 'pdf2p2_deactivate' );
 function pdf2p2_deactivate() {
     wp_clear_scheduled_hook( 'pdf2p2_import_event' );
     wp_clear_scheduled_hook( 'pdf2p2_cron_process_unprocessed' );
-    wp_clear_scheduled_hook( 'pdf2p2_cron_move_post_to_gutenberg' );
+    wp_clear_scheduled_hook( 'pdf2p2_cron_process_to_html' );
+    wp_clear_scheduled_hook( 'pdf2p2_cron_process_html_to_gb' );
     pdf2p2_log( 'cron.php — Deactivation hook triggered' , 'INFO' );
 }
 
@@ -34,18 +38,19 @@ function pdf2p2_reschedule( $old, $new ) {
     }
     wp_clear_scheduled_hook( 'pdf2p2_import_event' );
     wp_clear_scheduled_hook( 'pdf2p2_cron_process_unprocessed' );
-    wp_clear_scheduled_hook( 'pdf2p2_cron_move_post_to_gutenberg' );
+    wp_clear_scheduled_hook( 'pdf2p2_cron_process_to_html' );
+    wp_clear_scheduled_hook( 'pdf2p2_cron_process_html_to_gb' );    
     pdf2p2_log( 'cron.php — Change - Clear triggered' , 'INFO' );
 
     $schedules = wp_get_schedules();
     if ( isset( $schedules[ $new ] ) ) {
         wp_schedule_event( time(), $new, 'pdf2p2_import_event' );
         wp_schedule_event( time(), $new, 'pdf2p2_cron_process_unprocessed' );
-        wp_schedule_event( time(), $new, 'pdf2p2_cron_move_post_to_gutenberg' );
+        wp_schedule_event( time(), $new, 'pdf2p2_cron_process_to_html' );
+        wp_schedule_event( time(), $new, 'pdf2p2_cron_process_html_to_gb' );
         pdf2p2_log( 'cron.php — Change - New triggered' , 'INFO' );
     }
 }
-
 
 add_action( 'pdf2p2_import_event', 'pdf2p2_cron_import_event' );
 function pdf2p2_cron_import_event() {
@@ -69,22 +74,45 @@ function pdf2p2_cron_process_unprocessed() {
     }
     foreach ( $ids as $post_id ) {
         $result = pdf2p2_send_post_to_mistral_ocr( $post_id );
-        pdf2p2_log( sprintf( 'cron.php - post processed by OCR "%s"); .', $post_id ), 'INFO'  );
+            pdf2p2_log( sprintf( 'cron.php - post processed by OCR (ID: %d)', $post_id ), 'INFO' );
         if ( is_wp_error( $result ) ) {
-            error_log( sprintf( 'PDF2P2 OCR error for post %d: %s', $post_id, $result->get_error_message() ), 'INFO' );
+            error_log( sprintf( 'PDF2P2 OCR error for post %d: ', $post_id ), 'ERROR' );
         }
     }
 }
 
-add_action( 'pdf2p2_cron_move_post_to_gutenberg', 'pdf2p2_cron_move_post_to_gutenberg' );
-function pdf2p2_cron_move_post_to_gutenberg() {
-    $candidates = pdf2p2_get_gutenberg_candidates();
+add_action( 'pdf2p2_cron_process_to_html', 'pdf2p2_cron_process_to_html' );
+function pdf2p2_cron_process_to_html() {
+    $candidates = pdf2p2_get_html_unprocessed_ids();
     if ( empty( $candidates ) ) {
-        pdf2p2_log( 'cron.php - No Gutenberg candidates found', 'INFO' );
+        pdf2p2_log( 'cron.php - No HTML candidates found', 'INFO' );
         return;
     }
     foreach ( $candidates as $post_id ) {
-        pdf2p2_move_post_to_gutenberg( $post_id );
-        pdf2p2_log( sprintf( 'cron.php — Post moved to GB "%s"); .', $post_id ), 'INFO'  );
+        $result = pdf2p2_process_to_html( $post_id );
+        if ( is_wp_error( $result ) ) {
+            pdf2p2_log( sprintf( 'cron.php - Error processing post %d: %s', $post_id, $result->get_error_message() ), 'ERROR' );
+        } else {
+        pdf2p2_log( sprintf( 'cron.php - Post processed to HTML (ID: %d)', $post_id ), 'INFO' );
+        }
     }
 }
+
+ add_action( 'pdf2p2_cron_process_html_to_gb', 'pdf2p2_cron_process_html_to_gb' );
+ function pdf2p2_cron_process_html_to_gb() {
+    $candidates = pdf2p2_get_gb_unprocessed_post_ids();
+    if ( empty( $candidates ) ) {
+        pdf2p2_log( 'cron.php - No gb candidates found to process', 'INFO' );
+        return;
+    }
+    foreach ( $candidates as $post_id ) {
+        $result = pdf2p2_process_html_to_gb( $post_id );
+        if ( $result === false ) {
+            pdf2p2_log( sprintf( 'cron.php — GB conversion failed (ID: %d)', $post_id ), 'ERROR' );
+        } else {
+            pdf2p2_log( sprintf( 'cron.php — Post processed to GB (ID: %d)', $post_id ), 'INFO' );
+        }
+    }
+}
+
+
