@@ -37,8 +37,8 @@ jobs:
             md-example.txt \
             md-gb.php \
             menu.php \
-            minstral-send.php \
-            minstral.php \
+            mistral-send.php \
+            mistral.php \
             pdf2p2-home.php \
             pdf2p2-templates.php \
             pdf2p2.php \
