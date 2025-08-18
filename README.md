@@ -1,4 +1,4 @@
-# pdf2p2  test
+# pdf2p2
 
 There was already a “PDF2Post” plugin, so we shortened and evolved it into **pdf2p2**.  
 
