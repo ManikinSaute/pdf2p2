@@ -132,14 +132,20 @@ function pdf2p2_process_pdf_urls( array $urls, $force = false ) {
     }
 }
 
+
+
 function pdf2p2_render_import_page() {
+    if ( ! current_user_can( 'manage_options' ) ) {
+        return;
+    }
+
     ?>
     <div class="wrap">
       <h1>Import PDFs</h1>
       <p>This page allows you to import PDF files from a list of URLs.</p>
       <h2>Unimported</h2>
       <p>Any unimported files will that are in your feed will be listed below.</p>
-            <?
+            <?php
         $feed_url     = get_option( 'pdf2p2_import_rssfeed_url' );
         $not_imported = pdf2p2_get_not_imported_feed_urls( $feed_url );
         foreach ( $not_imported as $pdf_url ) {

@@ -11,7 +11,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  * @return int[] Array of post IDs not yet processed by mistral OCR.
  */
 
-// I need this function to get the unprocessed post IDs 
+// I need this function to get the unprocessed post IDs I think this can be turned into a big class to get all the post IDs in every function 
 
 function pdf2p2_get_unprocessed_post_ids( array $post_types = [ 'pdf2p2_import', 'pdf2p2_gutenberg' ] ) : array {
     $args = [
@@ -37,7 +37,6 @@ function pdf2p2_get_processed_post_ids(
 ) : array {
     $orderby = ( $orderby === 'modified' ) ? 'modified' : 'date';
     $order   = ( strtoupper( $order ) === 'ASC' ) ? 'ASC' : 'DESC';
-
     $args = [
         'post_type'               => $post_types,
         'post_status'             => 'any',
@@ -73,6 +72,10 @@ add_action('rest_api_init', function () {
 
 
 function pdf2p2_render_mistral_page() {
+
+    if ( ! current_user_can( 'manage_options' ) ) {
+        return;
+    }   
     echo '<div class="wrap">';
     echo '<h1>Check Posts</h1>';
     echo '<p>This page tell us what has or has not been processed by the OCR tool.</p>';
@@ -126,6 +129,7 @@ function pdf2p2_render_mistral_page() {
     if ( ! empty( $_POST['check_post_ids'] ) ) {
         $raw   = sanitize_text_field( wp_unslash( $_POST['check_post_ids'] ) );
         $ids   = array_filter( array_map( 'intval', explode( ',', $raw ) ) );
+        pdf2p2_log( sprintf( 'mistral.php — submit clicked. IDs: %s', implode( ', ', $ids ) ), 'INFO' );
 
         if ( ! empty( $ids ) ) {
             echo '<h2 style="margin-top:30px;">Preview of Selected Posts</h2>';

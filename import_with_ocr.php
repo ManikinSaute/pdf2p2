@@ -3,6 +3,8 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
+/*
+
 
 // I think this file is no longer needed, as the functionality has been moved to import_with_ocr.php
 
@@ -73,3 +75,5 @@ function pdf2p2_render_import_ocr_page() {
     }
     echo '</div>';
 }
+
+*/

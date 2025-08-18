@@ -1,4 +1,10 @@
 <?php
+if ( ! defined( 'ABSPATH' ) ) {
+    exit;
+}
+
+// If I came back to this I would make a class and pass the options to the class constructor ie html_processed = true etc
+// might need to limit the number returned so we dont get timeouts etc
 
 function pdf2p2_get_html_processed_ids(
     array $post_types = [ 'pdf2p2_import', 'pdf2p2_gutenberg' ],
@@ -78,26 +84,58 @@ function pdf2p2_get_html_unprocessed_ids(
  * @param int $post_id The ID of the post to process.
  * @return bool True on success, false on failure.
  */
+
+
+function pdf2p2_strip_placeholder_images_from_html( string $html ): string {
+    $html = preg_replace(
+        '#<figure\b[^>]*>\s*<img\b[^>]*\bsrc=["\']https?://img-\d+\.(?:jpe?g|png|gif|webp)["\'][^>]*>\s*</figure>#i',
+        '',
+        $html
+    );
+    $html = preg_replace(
+        '#<img\b[^>]*\bsrc=["\']https?://img-\d+\.(?:jpe?g|png|gif|webp)["\'][^>]*>#i',
+        '',
+        $html
+    );
+    $html = preg_replace('#<p>\s*</p>#i', '', $html);
+    return trim($html);
+}
+
+function pdf2p2_strip_placeholder_images_from_markdown( string $md ): string {
+    $pattern = '#!\[[^\]]*\]\(\s*https?://img-\d+\.(?:jpe?g|png|gif|webp)(?:\s+"[^"]*")?\s*\)#i';
+    $md = preg_replace($pattern, '', $md);
+    $md = preg_replace("/\n{3,}/", "\n\n", $md);
+    return trim($md);
+}
+
 function pdf2p2_process_to_html( $post_id ): bool {
     $post = get_post( $post_id );
     if ( ! $post || $post->post_type !== 'pdf2p2_import' ) {
         return false;
     }
-
     if ( ! class_exists( 'Parsedown' ) ) {
         require_once plugin_dir_path( __FILE__ ) . 'Parsedown.php';
     }
+    $Parsedown = new Parsedown();
+    $markdown_before = (string) $post->post_content;
+    $markdown = pdf2p2_preprocess_markdown( $markdown_before );
+    $markdown = pdf2p2_strip_placeholder_images_from_markdown( $markdown );
 
-    $Parsedown    = new Parsedown();
-    $markdown     = (string) $post->post_content;
+    if ( function_exists( 'pdf2p2_strip_placeholder_images_from_markdown' ) ) {
+        $markdown = pdf2p2_strip_placeholder_images_from_markdown( $markdown );
+    }
+
     $html_content = $Parsedown->text( $markdown );
+    $html_content = pdf2p2_postprocess_html( $html_content );
 
+    /*
     if ( function_exists( 'sideload_embedded_images' ) ) {
         $processed = sideload_embedded_images( $html_content, (int) $post_id );
         if ( is_string( $processed ) && $processed !== '' ) {
             $html_content = $processed;
         }
     }
+    */
 
     $updated = wp_update_post( [
         'ID'           => $post_id,
@@ -107,13 +145,16 @@ function pdf2p2_process_to_html( $post_id ): bool {
     if ( is_wp_error( $updated ) ) {
         return false;
     }
-    pdf2p2_log( sprintf( 'html-processing.php — all good. ID: %s' , $post_id) , 'SUCCESS' );
+    pdf2p2_log( sprintf( 'html-processing.php — All good. ID: %s' , $post_id) , 'SUCCESS' );
     update_post_meta( $post_id, 'html_processed', '1' );
     return true;
 }
 
-
 function pdf2p2_render_html_page() {
+    if ( ! current_user_can( 'manage_options' ) ) {
+        return;
+    }
+
     echo '<div class="wrap">';
     echo '<h1>Convert Markdown content to HTML</h1>';
     echo '<p>This page lists posts that have been processed by the OCR tool and are ready for Markdown to HTML conversion.</p>';
@@ -188,4 +229,29 @@ function pdf2p2_render_html_page() {
         }
     }
     echo '</div>';
+}
+
+function pdf2p2_preprocess_markdown(string $md): string {
+    if (class_exists('Normalizer')) { $md = Normalizer::normalize($md, Normalizer::FORM_C); }
+    $md = preg_replace('/^\s*Page\s+\d+\s*$/mi', '', $md);           // remove Page N
+    $md = preg_replace('/\s+%/', '%', $md);                          // 25.4 % -> 25.4%
+    $md = preg_replace('/\$\s*\{\s*\}\s*/', '', $md);                // ${ } -> ''
+    $md = preg_replace('/\$\s*\{\s*\}\s*\^\{\s*([^}]+)\s*\}\s*\$/', '^$1', $md); // ${ }^{4}$ -> ^4
+    $md = preg_replace('/\$(\d+)\^\{[^}]*text\s*\{\s*(st|nd|rd|th)\s*\}\s*\}\$/i', '$1$2', $md); // $60^{text {th }}$ -> 60th
+    $md = preg_replace('/\$\[\s*([A-Za-z])\s*\]\$\s*/', '$1', $md);  // $[t]$ he -> the
+    $md = preg_replace('/^\s*\[\^\d+\]\s*$/m', '', $md);             // dangling footnote refs
+    $md = preg_replace("/\n{3,}/", "\n\n", $md);                     // collapse blank lines
+    $md = preg_replace('/[ \t]+$/m', '', $md);                       // trim line ends
+    return trim($md);
+}
+
+function pdf2p2_postprocess_html(string $html): string {
+    $html = preg_replace('/(\d+)(st|nd|rd|th)\b/i', '$1<sup>$2</sup>', $html);          // 60th -> 60<sup>th</sup>
+    $html = preg_replace('/<h[1-6][^>]*>\s*Page\s+\d+\s*<\/h[1-6]>/i', '', $html);     // strip Page N headings
+    $html = preg_replace('/\s+%/', '%', $html);
+    $html = preg_replace('/\[\^\d+\]:\s*/', '', $html);                                  // raw footnote defs
+    $html = preg_replace('/\$\s*\{\s*\}\s*\^\{\s*([^}]+)\s*\}\s*\$/', '<sup>$1</sup>', $html);
+    $html = preg_replace('#<figure[^>]*>\s*<img[^>]*src=["\']https?://img-\d+\.(?:jpe?g|png|gif|webp)["\'][^>]*>\s*</figure>#i', '', $html); //placeholder images
+    $html = preg_replace('#<img[^>]*src=["\']https?://img-\d+\.(?:jpe?g|png|gif|webp)["\'][^>]*>#i', '', $html); // placeholder images
+    return trim($html);
 }

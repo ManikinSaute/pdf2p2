@@ -1,5 +1,4 @@
 <?php
-
 if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
@@ -31,9 +30,16 @@ function pdf2p2_register_cpts() {
             'taxonomies'    => [ 'status' ],
             'capability_type'    => 'post',
             'map_meta_cap'       => true,
+            'public'       => true,
+            'has_archive'  => true,
+            'rewrite'      => [
+                'slug'       => $slug,
+                'with_front' => false,
+            ],
         ];
 
         register_post_type( $slug, $args );
+        // pdf2p2_log( "Registered CPT: {$slug}", 'INFO' );
     }
 }
 add_action( 'init', 'pdf2p2_register_cpts' );
@@ -63,6 +69,7 @@ function pdf2p2_register_status_taxonomy() {
         'show_in_rest'      => true,
         'rest_base'         => 'pdf2p2-status',
     ] );
+    // pdf2p2_log( "Registered taxonomy: {$tax}", 'INFO' );
 
     $terms = [
         'un_verified'    => 'Un Verified',
@@ -77,11 +84,9 @@ function pdf2p2_register_status_taxonomy() {
 }
 add_action( 'init', 'pdf2p2_register_status_taxonomy', 11 );
 
-
 add_action( 'admin_init', function() {
     $post_types = [ 'pdf2p2_import', 'pdf2p2_gutenberg' ];
     foreach ( $post_types as $pt ) {
-        // — existing status column —
         add_filter( "manage_{$pt}_posts_columns", function( $cols ) {
             $cols['mistral_processed'] = __( 'OCR Processed', 'pdf2p2' );
             $cols['html_processed']    = __( 'HTML Processed', 'pdf2p2' );
@@ -101,15 +106,11 @@ add_action( 'admin_init', function() {
 
 function pdf2p2_cleanup_status_terms() {
     $taxonomy = 'status';
-
-    // Define the slugs we actually want to keep:
     $keep = [
         'un_verified',
         'human_verified',
         'staff_verified',
     ];
-
-    // Fetch all terms, even if empty:
     $terms = get_terms( [
         'taxonomy'   => $taxonomy,
         'hide_empty' => false,
@@ -121,7 +122,6 @@ function pdf2p2_cleanup_status_terms() {
 
     foreach ( $terms as $term ) {
         if ( ! in_array( $term->slug, $keep, true ) ) {
-            // Delete anything not in our “keep” list
             wp_delete_term( $term->term_id, $taxonomy );
         }
     }

@@ -1,4 +1,7 @@
 <?php
+if ( ! defined( 'ABSPATH' ) ) {
+    exit;
+}
 
 function render_pdf2p2_home_page() {
 	$settings_url   = admin_url('admin.php?page=pdf2p2-settings');

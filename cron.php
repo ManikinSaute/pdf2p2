@@ -1,5 +1,4 @@
 <?php
-
 if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
@@ -20,6 +19,7 @@ function pdf2p2_activate() {
     if ( ! wp_next_scheduled( 'pdf2p2_cron_process_html_to_gb' ) ) {
         wp_schedule_event( time(), $schedule, 'pdf2p2_cron_process_html_to_gb' );
     }
+    pdf2p2_log( 'cron.php — Activation hook completed' , 'INFO' );
 }
 
 register_deactivation_hook( __FILE__, 'pdf2p2_deactivate' );
@@ -28,7 +28,7 @@ function pdf2p2_deactivate() {
     wp_clear_scheduled_hook( 'pdf2p2_cron_process_unprocessed' );
     wp_clear_scheduled_hook( 'pdf2p2_cron_process_to_html' );
     wp_clear_scheduled_hook( 'pdf2p2_cron_process_html_to_gb' );
-    pdf2p2_log( 'cron.php — Deactivation hook triggered' , 'INFO' );
+    pdf2p2_log( 'cron.php — Deactivation hook completed' , 'INFO' );
 }
 
 add_action( 'update_option_pdf2p2_cron_schedule', 'pdf2p2_reschedule', 10, 2 );
@@ -40,8 +40,6 @@ function pdf2p2_reschedule( $old, $new ) {
     wp_clear_scheduled_hook( 'pdf2p2_cron_process_unprocessed' );
     wp_clear_scheduled_hook( 'pdf2p2_cron_process_to_html' );
     wp_clear_scheduled_hook( 'pdf2p2_cron_process_html_to_gb' );    
-    pdf2p2_log( 'cron.php — Change - Clear triggered' , 'INFO' );
-
     $schedules = wp_get_schedules();
     if ( isset( $schedules[ $new ] ) ) {
         wp_schedule_event( time(), $new, 'pdf2p2_import_event' );
@@ -114,5 +112,3 @@ function pdf2p2_cron_process_to_html() {
         }
     }
 }
-
-

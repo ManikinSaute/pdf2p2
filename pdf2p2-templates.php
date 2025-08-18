@@ -1,4 +1,7 @@
 <?php
+if ( ! defined( 'ABSPATH' ) ) {
+    exit;
+}
 
 add_filter( 'template_include', 'pdf2p2_load_single_template', 99 );
 function pdf2p2_load_single_template( $template ) {

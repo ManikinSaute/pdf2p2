@@ -1,7 +1,12 @@
 <?php
-
+if ( ! defined( 'ABSPATH' ) ) {
+    exit;
+}
 
 function pdf2p2_create_import_post( $title, $content ) {
+    if ( ! current_user_can( 'manage_options' ) ) {
+        return new WP_Error( 'permission_denied', __( 'You do not have permission to create import posts.' ) );
+    }
     $post_args = [
         'post_type'    => 'pdf2p2_import',
         'post_title'   => sanitize_text_field( $title ),

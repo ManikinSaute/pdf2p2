@@ -1,4 +1,7 @@
 <?php
+if ( ! defined( 'ABSPATH' ) ) {
+    exit;
+}
 
 add_action( 'admin_init', 'pdf2p2_register_settings' );
 function pdf2p2_register_settings() {
@@ -113,6 +116,7 @@ function pdf2p2_import_rssfeed_url_field_cb() {
     );
 }
 
+// prob should remove this 
 function pdf2p2_total_docs_field_cb() {
     $total = get_option( 'pdf2p2_total_docs', 0 );
     printf(
@@ -120,7 +124,6 @@ function pdf2p2_total_docs_field_cb() {
         esc_attr( $total )
     );
     echo '<p class="description">This could be used if you had a target number of documents, current not used anywhere.</p>';
-
 }
 
 function pdf2p2_cron_schedule_field_cb() {
@@ -176,12 +179,13 @@ function pdf2p2_log_setting_change( $option_name, $old_value, $new_value ) {
 add_action( 'updated_option', 'pdf2p2_log_setting_change', 10, 3 );
 
 function pdf2p2_render_settings_page() {
-    // Detect & log when the form was just saved
+    if ( ! current_user_can( 'manage_options' ) ) {
+        return;
+    }
+    
     if ( isset( $_GET['settings-updated'] ) && 'true' === $_GET['settings-updated'] ) {
         pdf2p2_log( 'SETTING Settings page saved', 'INFO' );
     }
-
-    // The actual form
     ?>
     <div class="wrap">
       <h1>Edit Settings</h1>

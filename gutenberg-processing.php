@@ -1,9 +1,10 @@
 <?php
-
-
+if ( ! defined( 'ABSPATH' ) ) {
+    exit;
+}
 
 // If I came back to this I would make a class and pass the options to the class constructor ie html_processed = true etc
-
+// might need to limit the number returned so we dont get timeouts etc
 
 function pdf2p2_get_gb_processed_post_ids(): array {
     $args = [
@@ -96,7 +97,9 @@ function pdf2p2_html_to_blocks( $html ) {
     libxml_use_internal_errors( true );
 
     $dom = new DOMDocument();
-    $dom->loadHTML( '<!DOCTYPE html><meta charset="utf-8"><div id="__w__">'.$html.'</div>' );
+    $dom->loadHTML( '<!DOCTYPE html><meta charset="utf-8"><div id="__w__">'.$html.'</div>',
+  LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD | LIBXML_PARSEHUGE
+ );
     $root = $dom->getElementById( '__w__' );
 
     $out = '';
@@ -218,6 +221,7 @@ function pdf2p2_process_html_to_gb( int $post_id ): bool {
     }
 
     $blocks_content = pdf2p2_html_to_blocks( (string) $post->post_content );
+// remove    $blocks_content = pdf2p2_remove_placeholder_image_blocks( $blocks_content );
 
     $updated = wp_update_post( [
         'ID'           => $post_id,
@@ -238,6 +242,10 @@ function pdf2p2_process_html_to_gb( int $post_id ): bool {
 
 
 function pdf2p2_render_gb_page() {
+    if ( ! current_user_can( 'manage_options' ) ) {
+    return;
+    }
+
     echo '<div class="wrap">';
     echo '<h1>Convert HTML content to Gutenberg</h1>';
     echo '<p>This page lists posts whose HTML is processed and lets you bulk process them to Gutenberg.</p>';

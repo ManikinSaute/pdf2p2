@@ -1,8 +1,8 @@
 <?php
 /*
 Plugin Name: pdf2p2
-Description: PDF import with OCR 
-Version:     1.7
+Description: Converts PDFs to guttenberg posts from an XML feed
+Version:     1.9
 Author:      Thomas Parsons
 Requires at least: 6.7
 Tested up to:      6.7
@@ -11,6 +11,10 @@ Author URI:  https://github.com/ManikinSaute/pdf2p2
 License:     GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 */
+
+if ( ! defined( 'ABSPATH' ) ) {
+    exit;
+}
 
 // core files
 require_once ABSPATH . WPINC . '/feed.php';
@@ -33,4 +37,6 @@ require_once __DIR__ . '/mistral-send.php';
 require_once __DIR__ . '/pdf2p2-templates.php';
 require_once __DIR__ . '/import_with_ocr.php';
 require_once __DIR__ . '/run-scripts.php';
+require_once __DIR__ . '/shortcode.php';
+
 register_activation_hook( __FILE__, 'pdf2p2_activate' );

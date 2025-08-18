@@ -1,11 +1,9 @@
 <?php
+if ( ! defined( 'ABSPATH' ) ) {
+    exit;
+}
 
-/**
- * Get all pdf2p2_import posts that have been OCR-processed
- * but not yet converted to Gutenberg.
- *
- * @return int[] Array of post IDs.
- */
+/*
 
 function pdf2p2_get_gutenberg_candidates(): array {
     $args = [
@@ -24,6 +22,9 @@ function pdf2p2_get_gutenberg_candidates(): array {
 }
 
 function pdf2p2_render_md_gb_page() {
+if ( ! current_user_can( 'manage_options' ) ) {
+    return;
+}
     echo '<div class="wrap">';
     echo '<h1>Imports Ready To Move</h1>';
     if ( isset( $_POST['convert_post_id'] ) ) {
@@ -173,3 +174,6 @@ function pdf2p2_node_to_block( DOMDocument $dom, DOMNode $node ) {
             return pdf2p2_wrap_block( 'html', $html );
     }
 }
+
+
+ */
