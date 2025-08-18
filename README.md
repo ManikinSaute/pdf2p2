@@ -6,7 +6,7 @@ There was already a “PDF2Post” plugin, so we shortened and evolved it into *
 
 ## Overview  
 
-**pdf2p2** is a WordPress plugin for importing, processing, and publishing PDFs as posts. It automates the entire flow:  
+**pdf2p2** is a WordPress plugin for importing, processing, and publishing PDFs as posts. It automates the entire flow:   
 
 - Parse an **RSS feed URL** to extract PDF links  
 - Download and save PDFs into the **Media Library**  
