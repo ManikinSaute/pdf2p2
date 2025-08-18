@@ -50,10 +50,6 @@ jobs:
             pdf2p2/
           zip -r pdf2p2.zip pdf2p2
 
-      - name: Create ZIP file
-        run: |
-          zip pdf2p2.zip archive-pdf2p2_gutenberg.php Parsedown.php cpt-terms.php cron.php default-content.php feed.php gutenberg-processing.php html-processing.php import.php image-processing.php import_with_ocr.php logs.php md-example.txt md-gb.php menu.php mistral-send.php mistral.php pdf2p2-home.php pdf2p2-templates.php pdf2p2.php settings.php shortcode.php single-pdf2p2_gutenberg.php
-
       - name: Commit ZIP file
         run: |
           git config user.name "github-actions[bot]"
