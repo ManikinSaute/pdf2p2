@@ -3,30 +3,37 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
+/*
 function pdf2p2_send_post_to_mistral_ocr( $post_id ) {
     $api_key = get_option( 'pdf2p2_api_key', '' );
     if ( ! $api_key ) {
         pdf2p2_log( 'mistral-send.php - API key not configured.', 'ERROR' );
         return new WP_Error( 'no_api_key', 'Mistral OCR API key not configured.' );
     }
+
     $post = get_post( $post_id );
     if ( ! $post ) {
         pdf2p2_log( sprintf( 'mistral-send.php - Invalid post ID: %d', $post_id ), 'ERROR' );
         return new WP_Error( 'invalid_post', 'Invalid post ID.' );
     }
+
+    // IMPORTANT: this must be a publicly reachable HTTPS URL, not a local file path
     $file_url = get_post_meta( $post_id, 'pdf2p2_original_file_path', true );
     if ( ! $file_url ) {
         pdf2p2_log( sprintf( 'mistral-send.php - No original PDF URL found for post ID: %d', $post_id ), 'ERROR' );
         return new WP_Error( 'no_url', 'No original PDF URL found in post meta.' );
     }
+    $file_url = esc_url_raw( $file_url );
+
     $payload = [
         'model'                => 'mistral-ocr-latest',
         'document'             => [
             'type'         => 'document_url',
-            'document_url' => esc_url_raw( $file_url ),
+            'document_url' => $file_url,
         ],
         'include_image_base64' => true,
     ];
+
     $response = wp_remote_post(
         'https://api.mistral.ai/v1/ocr',
         [
@@ -34,17 +41,21 @@ function pdf2p2_send_post_to_mistral_ocr( $post_id ) {
                 'Content-Type'  => 'application/json',
                 'Authorization' => 'Bearer ' . sanitize_text_field( $api_key ),
             ],
-            'body'    => wp_json_encode( $payload ),
-            'timeout' => 120,
+            'body'       => wp_json_encode( $payload ),
+            'timeout'    => 120,
+            'data_format'=> 'body',
         ]
     );
+
     if ( is_wp_error( $response ) ) {
         pdf2p2_log( sprintf( 'mistral-send.php - Request error: %s', $response->get_error_message() ), 'ERROR' );
         return $response;
     }
+
     $status_code = wp_remote_retrieve_response_code( $response );
     $body        = wp_remote_retrieve_body( $response );
     $data        = json_decode( $body, true );
+
     if ( 200 !== $status_code || ! is_array( $data ) || empty( $data['pages'] ) ) {
         pdf2p2_log(
             sprintf( 'mistral-send.php - Invalid response. HTTP %d: %s', $status_code, substr( $body, 0, 500 ) ),
@@ -52,15 +63,32 @@ function pdf2p2_send_post_to_mistral_ocr( $post_id ) {
         );
         return new WP_Error( 'invalid_response', 'Invalid or empty OCR response.' );
     }
+
     $new_content = '';
     foreach ( $data['pages'] as $page ) {
-        $new_content .= $page['text'] . "\n\n";
+        // Newer API returns `markdown`; fall back to `text` if present
+        $chunk = '';
+        if ( isset( $page['markdown'] ) && is_string( $page['markdown'] ) ) {
+            $chunk = $page['markdown'];
+        } elseif ( isset( $page['text'] ) && is_string( $page['text'] ) ) {
+            $chunk = $page['text'];
+        }
+
+        if ( $chunk !== '' ) {
+            $new_content .= $chunk . "\n\n";
+        }
     }
+
+    if ( $new_content === '' ) {
+        pdf2p2_log( 'mistral-send.php - OCR pages present but contained no text/markdown.', 'ERROR' );
+        return new WP_Error( 'empty_pages', 'OCR returned pages but no text.' );
+    }
+
     return $new_content;
 }
+*/
 
 
-/* 
 function pdf2p2_send_post_to_mistral_ocr( $post_id ) {
     $api_key = get_option( 'pdf2p2_api_key', '' );
     if ( ! $api_key ) {
@@ -159,8 +187,6 @@ function pdf2p2_send_post_to_mistral_ocr( $post_id ) {
 
     return true;
 }
-
-*/
 
 
 function pdf2p2_sideload_images_in_markdown( string $md, int $post_id ): array {

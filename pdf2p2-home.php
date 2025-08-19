@@ -64,5 +64,6 @@ function render_pdf2p2_home_page() {
 	echo '<p>TO DO: There are still many things to, including tidying, sanatisation, escaping, caching, number-only-once-ing N3Cing (I refusing to write that), removing old PDF files that are no longer needed. More info can be seen <a href="' . esc_url($github_url) . '">here</a>.</li>';
 	echo '<p>If this is intergrated with another system we will need a way to clean this system, ie remove attachemnts to reduce storge size etc.</p>';
 	echo '<p>When you need to change the RSS feed URL to BBC then back to Amnesty to get the value to save.</p>';
+	echo '[pdf2p2_list per_page="20"]';
 	echo '</div>';
 }
