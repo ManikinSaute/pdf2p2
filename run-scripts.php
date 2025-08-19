@@ -58,7 +58,7 @@ function pdf2p2_render_run_scripts_page() {
                     ob_start();
                     pdf2p2_process_pdf_urls( [ $url ] );
                     $output = ob_get_clean();
-                    echo $output;
+                    echo esc_url($output);
 
                     do_action( 'pdf2p2_cron_process_unprocessed' );
                     do_action( 'pdf2p2_cron_process_to_html' );

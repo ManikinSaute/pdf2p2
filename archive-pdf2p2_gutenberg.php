@@ -44,16 +44,20 @@ global $wp_query;
         </table>
 
         <?php
-        echo paginate_links( [
+            $pagination = paginate_links( [
             'total'     => (int) $wp_query->max_num_pages,
             'current'   => max( 1, (int) get_query_var( 'paged' ) ),
-            'prev_text' => '« ' . esc_html__( 'Previous', 'pdf2p2' ),
-            'next_text' => esc_html__( 'Next', 'pdf2p2' ) . ' »',
-        ] );
+            'prev_text' => '« Previous',
+            'next_text' => 'Next »',
+            ] );
+
+            if ( $pagination ) {
+              echo wp_kses_post( $pagination );
+            };
         ?>
 
     <?php else : ?>
-        <p><?php esc_html_e( 'No items found.', 'pdf2p2' ); ?></p>
+        <p><?php echo 'No items found.'; ?></p>
     <?php endif; ?>
 
 </main>

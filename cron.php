@@ -74,7 +74,7 @@ function pdf2p2_cron_process_unprocessed() {
         $result = pdf2p2_send_post_to_mistral_ocr( $post_id );
             pdf2p2_log( sprintf( 'cron.php - post processed by OCR (ID: %d)', $post_id ), 'INFO' );
         if ( is_wp_error( $result ) ) {
-            error_log( sprintf( 'PDF2P2 OCR error for post %d: ', $post_id ), 'ERROR' );
+            pdf2p2_log( sprintf( 'PDF2P2 OCR error for post %d: ', $post_id ), 'ERROR' );
         }
     }
 }

@@ -4,6 +4,12 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 
+// TO DO split the ID look up from the processing so we can imporve performance, this pull the whole post
+// TO DO make the ID look up a class method so we can use it in other places
+// TO DO look at caching 
+// TO DO Look at custom look up table 
+
+
 /**
  * Return an array of PDF URLs in the RSS/Atom feed
  * that have not yet been imported.

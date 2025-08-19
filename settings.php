@@ -147,12 +147,10 @@ function pdf2p2_debug_mode_cb() {
     printf(
         '<label for="pdf2p2_debug_mode">
             <input type="checkbox" id="pdf2p2_debug_mode" name="pdf2p2_debug_mode" value="1" %s />
-            %s
+            Enable debug mode
         </label>
-        <p class="description">%s</p>',
-        checked( 1, $enabled, false ),              
-        esc_html__( 'Enable debug mode', 'pdf2p2' ), 
-        esc_html__( 'Toggle pdf2p2 debug logging on or off. Turning this on will show some admin notices on this page', 'pdf2p2' ) 
+        <p class="description">Toggle pdf2p2 debug logging on or off. Turning this on will show more info on the logs page and notices on this page.</p>',
+        checked( 1, $enabled, false )
     );
 }
 
@@ -179,23 +177,17 @@ function pdf2p2_log_setting_change( $option_name, $old_value, $new_value ) {
 add_action( 'updated_option', 'pdf2p2_log_setting_change', 10, 3 );
 
 function pdf2p2_render_settings_page() {
-    if ( ! current_user_can( 'manage_options' ) ) {
-        return;
-    }
-    
-    if ( isset( $_GET['settings-updated'] ) && 'true' === $_GET['settings-updated'] ) {
-        pdf2p2_log( 'SETTING Settings page saved', 'INFO' );
-    }
-    ?>
+    if ( ! current_user_can( 'manage_options' ) ) return; ?>
+
     <div class="wrap">
       <h1>Edit Settings</h1>
       <form method="post" action="options.php">
         <?php
-          settings_fields(   'pdf2p2_settings_group' );
+          settings_fields( 'pdf2p2_settings_group' );
           do_settings_sections( 'pdf2p2-settings' );
           submit_button();
         ?>
       </form>
     </div>
-    <?php
+<?php 
 }

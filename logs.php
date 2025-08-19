@@ -24,6 +24,8 @@ function pdf2p2_log( $message, $level = 'INFO' ) {
     $ts    = date_i18n( 'Y-m-d H:i:s' );
 // TO DO set to UTC 
     $entry = sprintf( "[%s] [%s] %s\n", $ts, strtoupper( $level ), $message );
+// TO DO check its ok to ignore this error 
+// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
     error_log( $entry, 3, $file );
     pdf2p2_truncate_log();
 }
@@ -45,6 +47,8 @@ function pdf2p2_truncate_log( $max_size = 5242880, $keep_lines = 5000 ) {
     }
 }
 
+// TO DO check its ok to ignore this error
+// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_set_error_handler
 set_error_handler( function( $errno, $errstr, $errfile, $errline ) {
     $lvl = in_array( $errno, [E_WARNING, E_USER_WARNING], true ) ? 'WARNING' : 'ERROR';
     pdf2p2_log( "{$errstr} in {$errfile} on line {$errline}", $lvl );
@@ -59,7 +63,7 @@ function pdf2p2_render_logs_page() {
     $upload   = wp_upload_dir();
     $log_file = trailingslashit( $upload['basedir'] ) . 'pdf2p2/logs/plugin.log';
 
-    if ( isset( $_POST['pdf2p2_clear_logs'] ) && check_admin_referer( 'pdf2p2_clear_logs' ) ) {
+    if ( isset( $_POST['pdf2p2_clear_logs'] ) && check_admin_referer( 'pdf2p2_clear_logs', 'settings_nonce' ) ) {
         file_put_contents( $log_file, '' );
         pdf2p2_log( 'logs.php - Logs cleared', 'SUCCESS' );
         echo '<div class="notice notice-success"><p>Log file cleared.</p></div>';
@@ -68,9 +72,20 @@ function pdf2p2_render_logs_page() {
     echo '<div class="wrap"><h1>PDF2P2 Logs</h1>';
         echo '<h2>About The Logs</h2>';
         echo '<p>Log file location: <code>' . esc_html( $log_file ) . '</code></p>';
-        echo '<p>Log file size: ' . size_format( filesize( $log_file ) ) . '</p>';
+        echo '<p>Log file size: ' . esc_html( size_format( filesize( $log_file ) ) ) . '</p>';
         echo '<p>Notice this file is not protected from public access. Please consider protecting this with a server access rule.</p>';
         echo '<p>This log file is truncated at a given size by variables set in the log.php file.</p>';
+
+
+        if ( (int) get_option( 'pdf2p2_debug_mode', 0 ) === 1 ) {
+                echo '<h2>Debug Information</h2>';
+                echo '<p>Debug mode is enabled.</p>';
+                pdf2p2_render_revision_status();
+                pdf2p2_render_simplepie_status();
+                pdf2p2_render_feed_test();
+                pdf2p2_render_api_key_status();
+            }
+
         echo '<h2>Clear Logs</h2>';
         echo '<p>Click the button below to clear the log file:</p>';
 
@@ -81,10 +96,10 @@ function pdf2p2_render_logs_page() {
         $lines = file( $log_file, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES );
         $tail  = array_slice( $lines, -1000 );
 
-        echo '<form method="post" style="margin-bottom:1em;">'
-           . wp_nonce_field( 'pdf2p2_clear_logs', '_wpnonce', true, false )
-           . '<input type="submit" name="pdf2p2_clear_logs" class="button button-secondary" value="Clear log">'
-           . '</form>';
+        echo '<form method="post" style="margin-bottom:1em;">';
+        wp_nonce_field( 'pdf2p2_clear_logs', 'settings_nonce' );
+        echo '<input type="submit" name="pdf2p2_clear_logs" class="button button-secondary" value="Clear log">';
+        echo '</form>';
 
         echo '<pre style="max-height:600px; overflow:auto; background:#fff; border:1px solid #ddd; padding:1em;"><code>';
         foreach ( $tail as $line ) {
@@ -106,7 +121,85 @@ function pdf2p2_render_logs_page() {
     echo '</div>';
 }
 
+function pdf2p2_render_revision_status() {
+    $rev = WP_POST_REVISIONS;
+
+    if ( $rev === false ) {
+        $status = '<span style="color:#c00;">disabled</span>';
+    } elseif ( $rev === -1 ) {
+        $status = '<span style="color:#e67e22;">unlimited (-1)</span>';
+    } elseif ( is_int( $rev ) && $rev > 0 ) {
+        $status = esc_html( $rev ) . ' per post';
+    } else {
+        $status = '<span style="color:green;">default</span>';
+    }
+    echo '<p>Revisions: ' . wp_kses_post( $status ) . '</p>';
+}
+
+function pdf2p2_render_simplepie_status() {
+    if ( ! class_exists( 'SimplePie\SimplePie', false ) ) {
+        require_once ABSPATH . WPINC . '/class-simplepie.php';
+    }
+
+    if ( class_exists( 'SimplePie' ) ) {
+        echo '<p style="color:green;">SimplePie: Loaded </p>';
+        pdf2p2_log( 'logs.php - SimplePie is loaded.', 'SUCCESS' );
+    } else {
+        echo '<p>SimplePie: Not loaded </p>';
+        pdf2p2_log( 'logs.php - SimplePie is not loaded.', 'ERROR' );
+    }
+}
+
+function pdf2p2_render_feed_test() {
+    $test_url = 'https://feeds.bbci.co.uk/news/rss.xml';
+    $feed     = fetch_feed( $test_url );
+    if ( is_wp_error( $feed ) ) {
+        echo '<p>Feed test: Error  ' . esc_html( $feed->get_error_message() ) . '</p>';
+        pdf2p2_log( 'logs.php - Error fetching Feed', 'ERROR' );
+        return;
+    }
+
+    $max_items = $feed->get_item_quantity( 1 );
+    if ( $max_items > 0 ) {
+        echo '<p style="color:green;">Feed test: Success  ' . esc_html( $max_items ) . ' item(s) retrieved</p>';
+        pdf2p2_log( 'logs.php - Feed is loaded.', 'SUCCESS' );
+    } else {
+        echo '<p>Feed test: No items found ⚠️</p>';
+        pdf2p2_log( 'logs.php - No items found', 'WARNING' );
+    }
+}
+
+function pdf2p2_render_api_key_status() {
+    $api_key = get_option( 'pdf2p2_api_key', '' );
+    if ( ! $api_key ) {
+        echo '<p>API Key: Missing</p>';
+        pdf2p2_log( 'logs.php - API key is empty', 'ERROR' );
+        return;
+    }
+    $response = wp_remote_get(
+        'https://api.mistral.ai/v1/models',
+        [
+            'timeout' => 5,
+            'headers' => [ 'Authorization' => "Bearer {$api_key}" ],
+        ]
+    );
+
+    if ( is_wp_error( $response ) ) {
+        echo '<p>API Key:< Request failed ' . esc_html( $response->get_error_message() ) . '</p>';
+        pdf2p2_log( 'logs.php - API request failed: ' . $response->get_error_message(), 'ERROR' );
+    } elseif ( wp_remote_retrieve_response_code( $response ) !== 200 ) {
+        echo '<p>API Key: Rejected </p>';
+        pdf2p2_log( 'logs.php - API key rejected', 'ERROR' );
+    } else {
+        echo '<p style="color:green;">API Key: Accepted</p>';
+        pdf2p2_log( 'logs.php - API key accepted', 'SUCCESS' );
+    }
+}
+
+
+/* 
 add_action( 'admin_init', function() {
+    wp_nonce_field( 'pdf2p2_settings', 'pdf2p2_settings_nonce' );
     if ( 1 !== (int) get_option( 'pdf2p2_debug_mode', 0 ) ) {
         return;
     }
@@ -114,7 +207,13 @@ add_action( 'admin_init', function() {
     if ( ! in_array( $page, [ 'pdf2p2-settings', 'pdf2p2-logs' ], true ) ) {
         return;
     }
-    add_action( 'admin_notices', 'pdf2p2_check_revisions_notice' );
+    if ( isset( $_GET['action'] ) && 'check_revisions' === $_GET['action'] ) {
+        if ( ! isset( $_GET['pdf2p2_nonce'] ) || 
+             ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_GET['pdf2p2_nonce'] ) ), 'pdf2p2_check_revisions' ) ) {
+            wp_die( esc_html__( 'Security check failed', 'pdf2p2' ) );
+        }
+        add_action( 'admin_notices', 'pdf2p2_check_revisions_notice' );
+    }
     add_action( 'admin_notices', 'sp_loaded_admin_notice' );
     add_action( 'admin_notices', 'fft_test_fetch_feed' );
     add_action( 'admin_notices', 'check_api_key' );
@@ -209,5 +308,6 @@ function check_api_key() {
 }
 
 
+*/ 
 
 

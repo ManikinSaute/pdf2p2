@@ -1,3 +1,15 @@
+=== pdf2p2 ===
+Contributors: ManikinSaute
+Tags: pdf, import, ocr
+Requires at least: 6.7
+Tested up to: 6.8
+Requires PHP: 8.2
+Stable tag: 2.0.0
+License: GPLv2 or later
+License URI: https://www.gnu.org/licenses/gpl-2.0.html
+
+
+
 # pdf2p2
 
 There was already a “PDF2Post” plugin, so we shortened and evolved it into **pdf2p2**.  
@@ -5,6 +17,8 @@ There was already a “PDF2Post” plugin, so we shortened and evolved it into *
 ---
 
 ## Overview  
+
+### This plugin is not yet production ready. This is a proof of concept   
 
 **pdf2p2** is a WordPress plugin for importing, processing, and publishing PDFs as posts. It automates the entire flow:   
 
@@ -19,20 +33,7 @@ There was already a “PDF2Post” plugin, so we shortened and evolved it into *
 - Populate post content with OCR results  
 - Convert **Markdown → HTML → Gutenberg blocks**  
 - Provide post-level metadata, accessible in the editor sidebar  
-- Expose single posts as **JSON endpoints**  
-
----
-
-## Demo & Testing  
-
-- Try the [latest version](https://playground.wordpress.net/?blueprint-url=https://raw.githubusercontent.com/ManikinSaute/pdf2p2/main/blueprint.json) in WordPress Playground  
-- Try the [latest stable version](https://playground.wordpress.net/?blueprint-url=https://raw.githubusercontent.com/ManikinSaute/pdf2p2/main/blueprint-stable.json) in WordPress Playground  
-- Modify [pdf2p2.php](https://github.com/ManikinSaute/pdf2p2/blob/main/pdf2p2.php) locally and paste into the Playground file editor (then deactivate/reactivate to reload changes)  
-- Edit the [blueprint.json](https://github.com/ManikinSaute/pdf2p2/blob/main/blueprint.json) directly  
-- Test edits to a blueprint via the [Playground Builder](https://playground.wordpress.net/builder/builder.html)  
-- Any commit to `main` containing **“zip-it”** will trigger:  
-  - A ZIP build of the plugin  
-  - An updated Playground link to run code from `main`  
+- Expose single posts as **JSON endpoints**    
 
 ---
 

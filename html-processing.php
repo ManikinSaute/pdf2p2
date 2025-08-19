@@ -5,6 +5,10 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 // If I came back to this I would make a class and pass the options to the class constructor ie html_processed = true etc
 // might need to limit the number returned so we dont get timeouts etc
+// TO DO split the ID look up from the processing so we can imporve performance, this pull the whole post
+// TO DO make the ID look up a class method so we can use it in other places
+// TO DO look at caching 
+// TO DO Look at custom look up table 
 
 function pdf2p2_get_html_processed_ids(
     array $post_types = [ 'pdf2p2_import', 'pdf2p2_gutenberg' ],
@@ -25,8 +29,6 @@ function pdf2p2_get_html_processed_ids(
         'no_found_rows'           => true,
         'update_post_meta_cache'  => false,
         'update_post_term_cache'  => false,
-        'ignore_sticky_posts'     => true,
-        'suppress_filters'        => true,
         'meta_query'              => [[
             'key'     => 'html_processed',
             'value'   => 1,               
@@ -57,8 +59,6 @@ function pdf2p2_get_html_unprocessed_ids(
         'no_found_rows'           => true,
         'update_post_meta_cache'  => false,
         'update_post_term_cache'  => false,
-        'ignore_sticky_posts'     => true,
-        'suppress_filters'        => true,
         'meta_query'              => [
             'relation' => 'OR',
             [
@@ -196,36 +196,40 @@ function pdf2p2_render_html_page() {
     echo '<input type="text" name="send_convert_post_ids" style="width:300px;" '
        . 'placeholder="e.g. 12,34,56" '
        . 'value="' . ( isset( $_POST['send_convert_post_ids'] ) 
-            ? esc_attr( $_POST['send_convert_post_ids'] ) 
+            ? esc_attr( wp_unslash( $_POST['send_convert_post_ids'] ))
             : '' ) . '">';
     submit_button( __( 'Send to HTML', 'pdf2p2' ), 'primary', 'send_convert' );
     echo '</form>';
 
     if ( ! empty( $_POST['send_convert'] )
+      && isset( $_POST['pdf2p2_convert_nonce'] )
       && check_admin_referer( 'pdf2p2_convert', 'pdf2p2_convert_nonce' )
     ) {
-        $raw = sanitize_text_field( wp_unslash( $_POST['send_convert_post_ids'] ) );
-        $ids = array_filter( array_map( 'intval', explode( ',', $raw ) ) );
+       $raw = isset( $_POST['send_convert_post_ids'] )
+            ? sanitize_text_field( wp_unslash( $_POST['send_convert_post_ids'] ) )
+            : '';
+        $ids = array_filter( array_map( 'intval', preg_split( '/\s*,\s*/', $raw ) ) );
         pdf2p2_log( sprintf( 'html-processing.php — submit clicked. IDs: %s', implode( ', ', $ids ) ), 'INFO' );
         if ( $ids ) {
-            echo '<h2>' . esc_html__( 'Convert Results', 'pdf2p2' ) . '</h2>';
+            echo '<h2>Convert Results</h2>';
             foreach ( $ids as $post_id ) {
                 $result = pdf2p2_process_to_html( $post_id );
                 if ( ! $result ) {
-                echo '<p style="color:red;"><strong>' .
-                    sprintf( esc_html__( '%1$s (ID %2$d) failed to process.', 'pdf2p2' ),
-                    esc_html( get_the_title( $post_id ) ), intval( $post_id ) ) .
-                    '</strong></p>';
+                echo '<p style="color:red;">' .
+                    sprintf('%1$s (ID %2$d) failed to process.',
+                    esc_html( get_the_title( $post_id ) ), 
+                    intval( $post_id ) ) .
+                    '</p>';
                 } else {
-                echo '<p>' . sprintf(
-                    esc_html__( '%1$s (ID %2$d) processed successfully.', 'pdf2p2' ),
+                echo '<p>' . 
+                    sprintf('%1$s (ID %2$d) processed successfully.',
                     esc_html( get_the_title( $post_id ) ),
-                    intval( $post_id )
-                ) . '</p>';
+                    intval( $post_id )) 
+                    . '</p>';
                 }
             }
         } else {
-            echo '<p><em>' . esc_html__( 'No valid post IDs provided.', 'pdf2p2' ) . '</em></p>';
+            echo '<p>No valid post IDs provided.</p>';
         }
     }
     echo '</div>';

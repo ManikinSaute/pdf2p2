@@ -10,6 +10,14 @@ if ( ! defined( 'ABSPATH' ) ) {
  * @param bool     $force Skip duplicate check when true.
  */
 
+// TO DO split the ID look up from the processing so we can imporve performance, this pull the whole post
+// TO DO make the ID look up a class method so we can use it in other places
+// TO DO look at caching 
+// TO DO Look at custom look up table 
+// TO DO look at using WP-CLI for batch processing
+// TO DO look at using a look up that returns if one of the checks is true beofre doing the next check, like is does the file name exist, no, then does the URL exist, no, then does the hash exist etc. might be the wrong order but it should be considered. ie try and exit the loop early if possible
+
+
 function pdf2p2_process_pdf_urls( array $urls, $force = false ) {
     require_once ABSPATH . 'wp-admin/includes/file.php';
     require_once ABSPATH . 'wp-admin/includes/media.php';
@@ -31,47 +39,48 @@ function pdf2p2_process_pdf_urls( array $urls, $force = false ) {
             pdf2p2_log( 
                 sprintf( 'import.php — skipped already exists: %s', $file_name ), 
                 'INFO' 
-                );
-            echo '<div class="notice notice-warning"><p>'
-               . sprintf(
-                   esc_html__( 'Skipped import for %s: already exists.', 'pdf2p2' ),
-                   esc_html( $file_name )
-               )
-               . '</p></div>';
+            );
+            echo '<div class="notice notice-warning"><p>' .
+                sprintf(
+                    'Skipped import for %s: already exists.',
+                    esc_html( $file_name )
+                ) .
+                '</p></div>';
+
             continue;
         }
 
         $tmp_file = download_url( $pdf_url );
         if ( is_wp_error( $tmp_file ) ) {
-            pdf2p2_log( 
-                sprintf( 'import.php — wp error : %s', $pdf_url ), 
-                'ERROR' 
-                );
-            echo '<div class="notice notice-error"><p>'
-               . sprintf(
-                   esc_html__( 'Error downloading %s: %s', 'pdf2p2' ),
-                   esc_html( $file_name ),
-                   esc_html( $tmp_file->get_error_message() )
-               )
-               . '</p></div>';
+            pdf2p2_log(
+                sprintf( 'import.php — wp error : %s', $pdf_url ),
+                'ERROR'
+            );
+            echo '<div class="notice notice-error"><p>' .
+                sprintf(
+                    'Error downloading %s: %s',
+                    esc_html( $file_name ),
+                    esc_html( $tmp_file->get_error_message() )
+                ) .
+                '</p></div>';
             continue;
         }
 
         $file_array = [ 'name' => $file_name, 'tmp_name' => $tmp_file ];
         $attach_id  = media_handle_sideload( $file_array, 0 );
         if ( is_wp_error( $attach_id ) ) {
-                pdf2p2_log( 
-                    sprintf( 'import.php — wp error side load : %s', $pdf_url ), 
-                    'ERROR' 
-                    );
-            @unlink( $file_array['tmp_name'] );
-            echo '<div class="notice notice-error"><p>'
-               . sprintf(
-                   esc_html__( 'Upload error for %s: %s', 'pdf2p2' ),
-                   esc_html( $file_name ),
-                   esc_html( $attach_id->get_error_message() )
-               )
-               . '</p></div>';
+            pdf2p2_log(
+                sprintf( 'import.php — wp error side load : %s', $pdf_url ),
+                'ERROR'
+            );
+            wp_delete_file( $file_array['tmp_name'] );
+            echo '<div class="notice notice-error"><p>' .
+                sprintf(
+                    'Upload error for %s: %s',
+                    esc_html( $file_name ),
+                    esc_html( $attach_id->get_error_message() )
+                ) .
+                '</p></div>';
             continue;
         }
 
@@ -110,7 +119,7 @@ function pdf2p2_process_pdf_urls( array $urls, $force = false ) {
 
             echo '<div class="notice notice-success"><p>'
                . sprintf(
-                   esc_html__( 'Imported %s (Post ID: %d)', 'pdf2p2' ),
+                   'Imported %s (Post ID: %d)',
                    esc_html( $file_name ),
                    esc_html( $post_id )
                )
@@ -122,7 +131,7 @@ function pdf2p2_process_pdf_urls( array $urls, $force = false ) {
                 );
             echo '<div class="notice notice-error"><p>'
                . sprintf(
-                   esc_html__( 'Error creating import post for %s: %s', 'pdf2p2' ),
+                   'Error creating import post for %s: %s',
                    esc_html( $file_name ),
                    esc_html( $post_id->get_error_message() )
                )
@@ -131,8 +140,6 @@ function pdf2p2_process_pdf_urls( array $urls, $force = false ) {
         }
     }
 }
-
-
 
 function pdf2p2_render_import_page() {
     if ( ! current_user_can( 'manage_options' ) ) {
@@ -157,28 +164,32 @@ function pdf2p2_render_import_page() {
       <p>Enter one or more PDF URLs (one per line) this will create a post and sideload the PDF into the media library and also compute a SHA-256 hash for each file.</p>
       
       <form method="post">
-        <?php wp_nonce_field( 'pdf2p2_upload', 'pdf2p2_nonce' ); ?>
-
-        <textarea name="pdf_urls" rows="5" style="width:800px;" placeholder="https://www.amnesty.org/en/wp-content/uploads/2025/07/EUR4401332025ENGLISH.pdf" required><?php
-          echo isset( $_POST['pdf_urls'] ) ? esc_textarea( $_POST['pdf_urls'] ) : '';
-        ?></textarea>
-
-        <p>
-          <label>
-            <input type="checkbox" name="force_import" value="1">
-            Force import even if duplicates found
-          </label>
-        </p>
-
-        <input type="submit" name="pdf_url_submit" class="button button-primary" value="Upload PDFs">
-      </form>
+        <?php wp_nonce_field( 'pdf2p2_import', 'pdf2p2_import_nonce' ); 
+        $prefill = 'https://www.amnesty.org/en/wp-content/uploads/2025/08/ACT5001972025ENGLISH.pdf';
+        if ( isset( $_POST['pdf2p2_import'] ) ) {
+            $prefill = esc_textarea(
+                sanitize_textarea_field( wp_unslash( $_POST['pdf2p2_import'] ) )
+            );
+        }
+	    ?>
+        <textarea name="pdf2p2_import" rows="5" style="width:800px;" required><?php echo esc_url( $prefill ); ?></textarea>
+            <p>
+                <label>
+                    <input type="checkbox" name="force_import" value="1"
+                        <?php checked( ! empty( $_POST['force_import'] ) ); ?>>
+                    Force import even if duplicates are found
+                </label>
+            </p>
+            <input type="submit" name="pdf2p2_import_submit" class="button button-primary" value="Upload PDFs">
+        </form>
     <?php
 
-    if ( isset( $_POST['pdf_url_submit'] ) && wp_verify_nonce( $_POST['pdf2p2_nonce'], 'pdf2p2_upload' ) ) {
-        $raw   = sanitize_textarea_field( $_POST['pdf_urls'] );
+    if ( isset( $_POST['pdf2p2_import_submit'], $_POST['pdf2p2_import_nonce'] ) 
+        && wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['pdf2p2_import_nonce'] ) ), 'pdf2p2_import' ) ) {
+        $raw   = sanitize_textarea_field( wp_unslash( $_POST['pdf2p2_import'] ) );
         $lines = preg_split( '/\r\n|\r|\n/', trim( $raw ) );
         $urls  = array_filter( array_map( 'esc_url_raw', $lines ) );
-        $force = ! empty( $_POST['force_import'] );
+        $force = ! empty( $_POST['force_import'] ) ? (bool) absint( $_POST['force_import'] ) : false;
         pdf2p2_process_pdf_urls( $urls, $force );
         pdf2p2_log( 
             sprintf( 'Import.php — submitted with URLs: %s', implode( ', ', $urls ) ), 

@@ -3,8 +3,12 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
-// If I came back to this I would make a class and pass the options to the class constructor ie html_processed = true etc
-// might need to limit the number returned so we dont get timeouts etc
+// TO DO If I came back to this I would make a class and pass the options to the class constructor ie html_processed = true etc
+// TO DO might need to limit the number returned so we dont get timeouts etc
+// TO DO split the ID look up from the processing so we can imporve performance, this pull the whole post
+// TO DO make the ID look up a class method so we can use it in other places
+// TO DO look at caching 
+// TO DO Look at custom look up table 
 
 function pdf2p2_get_gb_processed_post_ids(): array {
     $args = [
@@ -279,47 +283,55 @@ function pdf2p2_render_gb_page() {
     echo '<p>Enter one or more post IDs (CSV), e.g. <code>12,34,56</code>.</p>';
     echo '<form method="post">';
     wp_nonce_field( 'pdf2p2_process_gb_bulk', 'pdf2p2_process_gb_bulk_nonce' );
-    echo '<input type="text" name="gb_process_post_ids" style="width:300px;" '
-       . 'placeholder="e.g. 12,34,56" '
-       . 'value="' . ( isset( $_POST['gb_process_post_ids'] ) ? esc_attr( $_POST['gb_process_post_ids'] ) : '' ) . '"> ';
-    submit_button( __( 'Convert to Gutenberg', 'pdf2p2' ), 'primary', 'gb_process', false );
-    echo '</form>';
+    // not sure about sanatisation here
+    $prefill = '';
+        if ( isset( $_POST['gb_process_post_ids'] ) ) {
+            $prefill = esc_attr( wp_unslash( $_POST['gb_process_post_ids'] ) );
+        }
+        echo '<input type="text" name="gb_process_post_ids" style="width:300px;" '
+        . 'placeholder="e.g. 12,34,56" '
+        . 'value="' . esc_attr( $prefill ) . '"> ';
+        submit_button( __( 'Convert to Gutenberg', 'pdf2p2' ), 'primary', 'gb_process', false );
+        echo '</form>';
 
-    if ( ! empty( $_POST['gb_process'] )
-      && isset( $_POST['pdf2p2_process_gb_bulk_nonce'] )
-      && check_admin_referer( 'pdf2p2_process_gb_bulk', 'pdf2p2_process_gb_bulk_nonce' )
+   if ( ! empty( $_POST['gb_process'] )
+        && isset( $_POST['pdf2p2_process_gb_bulk_nonce'] )
+        && check_admin_referer( 'pdf2p2_process_gb_bulk', 'pdf2p2_process_gb_bulk_nonce' )
     ) {
-        $raw = isset( $_POST['gb_process_post_ids'] ) ? sanitize_text_field( wp_unslash( $_POST['gb_process_post_ids'] ) ) : '';
+        $raw = isset( $_POST['gb_process_post_ids'] )
+            ? sanitize_text_field( wp_unslash( $_POST['gb_process_post_ids'] ) )
+            : '';
+
         $ids = array_filter( array_map( 'intval', preg_split( '/\s*,\s*/', $raw ) ) );
 
         pdf2p2_log( sprintf( 'gutenberg-processing.php — bulk submit. IDs: %s', implode( ', ', $ids ) ), 'INFO' );
 
         if ( $ids ) {
-            echo '<h3>' . esc_html__( 'Bulk Convert Results', 'pdf2p2' ) . '</h3><ul>';
+            echo '<h3>Bulk Convert Results</h3><ul>';
             foreach ( $ids as $post_id ) {
                 if ( ! current_user_can( 'edit_post', $post_id ) ) {
-                    echo '<li>' . sprintf( esc_html__( 'ID %d: permission denied.', 'pdf2p2' ), $post_id ) . '</li>';
+                    echo '<li>' . esc_html( sprintf( 'ID %d: permission denied.', $post_id ) ) . '</li>';
                     continue;
                 }
                 $post = get_post( $post_id );
                 if ( ! $post || $post->post_type !== 'pdf2p2_import' ) {
-                    echo '<li>' . sprintf( esc_html__( 'ID %d: not a pdf2p2_import post.', 'pdf2p2' ), $post_id ) . '</li>';
+                    echo '<li>' . esc_html( sprintf( 'ID %d: not a pdf2p2_import post.', $post_id ) ) . '</li>';
                     continue;
                 }
                 if ( '1' !== get_post_meta( $post_id, 'html_processed', true ) ) {
-                    echo '<li>' . sprintf( esc_html__( 'ID %d: HTML not marked as processed.', 'pdf2p2' ), $post_id ) . '</li>';
+                    echo '<li>' . esc_html( sprintf( 'ID %d: HTML not marked as processed.', $post_id ) ) . '</li>';
                     continue;
                 }
-
                 $ok = pdf2p2_process_html_to_gb( $post_id );
                 if ( $ok ) {
-                    echo '<li>' . sprintf(
-                        esc_html__( '%1$s (ID %2$d) processed.', 'pdf2p2' ),
-                        esc_html( get_the_title( $post_id ) ),
-                        $post_id
-                    ) . '</li>';
+                    $msg = sprintf(
+                        'ID %d processed. Title: %s',
+                        (int) $post_id,
+                        get_the_title( $post_id )
+                    );
+                    echo '<li>' . esc_html( $msg ) . '</li>';
                 } else {
-                    echo '<li>' . sprintf( esc_html__( 'ID %d: conversion failed.', 'pdf2p2' ), $post_id ) . '</li>';
+                    echo '<li>' . esc_html( sprintf( 'ID %d: conversion failed.', (int) $post_id ) ) . '</li>';
                 }
             }
             echo '</ul>';
@@ -327,6 +339,5 @@ function pdf2p2_render_gb_page() {
             echo '<p><em>' . esc_html__( 'No valid post IDs provided.', 'pdf2p2' ) . '</em></p>';
         }
     }
-    echo '</div>'; 
+    echo '</div>';
 }
-

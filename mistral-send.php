@@ -7,6 +7,64 @@ function pdf2p2_send_post_to_mistral_ocr( $post_id ) {
     $api_key = get_option( 'pdf2p2_api_key', '' );
     if ( ! $api_key ) {
         pdf2p2_log( 'mistral-send.php - API key not configured.', 'ERROR' );
+        return new WP_Error( 'no_api_key', 'Mistral OCR API key not configured.' );
+    }
+    $post = get_post( $post_id );
+    if ( ! $post ) {
+        pdf2p2_log( sprintf( 'mistral-send.php - Invalid post ID: %d', $post_id ), 'ERROR' );
+        return new WP_Error( 'invalid_post', 'Invalid post ID.' );
+    }
+    $file_url = get_post_meta( $post_id, 'pdf2p2_original_file_path', true );
+    if ( ! $file_url ) {
+        pdf2p2_log( sprintf( 'mistral-send.php - No original PDF URL found for post ID: %d', $post_id ), 'ERROR' );
+        return new WP_Error( 'no_url', 'No original PDF URL found in post meta.' );
+    }
+    $payload = [
+        'model'                => 'mistral-ocr-latest',
+        'document'             => [
+            'type'         => 'document_url',
+            'document_url' => esc_url_raw( $file_url ),
+        ],
+        'include_image_base64' => true,
+    ];
+    $response = wp_remote_post(
+        'https://api.mistral.ai/v1/ocr',
+        [
+            'headers' => [
+                'Content-Type'  => 'application/json',
+                'Authorization' => 'Bearer ' . sanitize_text_field( $api_key ),
+            ],
+            'body'    => wp_json_encode( $payload ),
+            'timeout' => 120,
+        ]
+    );
+    if ( is_wp_error( $response ) ) {
+        pdf2p2_log( sprintf( 'mistral-send.php - Request error: %s', $response->get_error_message() ), 'ERROR' );
+        return $response;
+    }
+    $status_code = wp_remote_retrieve_response_code( $response );
+    $body        = wp_remote_retrieve_body( $response );
+    $data        = json_decode( $body, true );
+    if ( 200 !== $status_code || ! is_array( $data ) || empty( $data['pages'] ) ) {
+        pdf2p2_log(
+            sprintf( 'mistral-send.php - Invalid response. HTTP %d: %s', $status_code, substr( $body, 0, 500 ) ),
+            'ERROR'
+        );
+        return new WP_Error( 'invalid_response', 'Invalid or empty OCR response.' );
+    }
+    $new_content = '';
+    foreach ( $data['pages'] as $page ) {
+        $new_content .= $page['text'] . "\n\n";
+    }
+    return $new_content;
+}
+
+
+/* 
+function pdf2p2_send_post_to_mistral_ocr( $post_id ) {
+    $api_key = get_option( 'pdf2p2_api_key', '' );
+    if ( ! $api_key ) {
+        pdf2p2_log( 'mistral-send.php - API key not configured.', 'ERROR' );
         return new WP_Error( 'no_api_key', 'mistral OCR API key not configured.' );
     }
     $post = get_post( $post_id );
@@ -102,6 +160,8 @@ function pdf2p2_send_post_to_mistral_ocr( $post_id ) {
     return true;
 }
 
+*/
+
 
 function pdf2p2_sideload_images_in_markdown( string $md, int $post_id ): array {
     $count = 0;
@@ -174,18 +234,22 @@ function pdf2p2_render_mistral_send_page() {
     } else {
         echo '<p>No documents to process</p>';
     }
+// not sure about sanatisation here
+    $prefill = '';
+    if ( isset( $_POST['send_mistral_post_ids'] ) ) {
+        $prefill_raw = wp_unslash( $_POST['send_mistral_post_ids'] ); 
+        $prefill     = esc_attr( sanitize_text_field( $prefill_raw ) );
+    }
 
     echo '<h2>Send Posts</h2>';
     echo '<p>Add a post ID or many in CSV format.</p>';
     echo '<form method="post">';
     wp_nonce_field( 'pdf2p2_send_ocr', 'pdf2p2_send_ocr_nonce' );
     echo '<input type="text" name="send_mistral_post_ids" style="width:300px;" '
-       . 'placeholder="e.g. 12,34,56" '
-       . 'value="' . ( isset( $_POST['send_mistral_post_ids'] ) 
-            ? esc_attr( $_POST['send_mistral_post_ids'] ) 
-            : '' ) . '">';
-    submit_button( __( 'Send to OCR', 'pdf2p2' ), 'primary', 'send_ocr' );
-    echo '</form>';
+    . 'placeholder="e.g. 12,34,56" '
+    . 'value="' . esc_attr( $prefill ) . '">';
+        submit_button( 'Send to OCR', 'primary', 'send_ocr' );
+        echo '</form>';
 
     if ( ! empty( $_POST['send_ocr'] )
       && check_admin_referer( 'pdf2p2_send_ocr', 'pdf2p2_send_ocr_nonce' )
@@ -194,7 +258,7 @@ function pdf2p2_render_mistral_send_page() {
         $ids = array_filter( array_map( 'intval', explode( ',', $raw ) ) );
         pdf2p2_log( sprintf( 'mistral-send.php — submit clicked. IDs: %s', implode( ', ', $ids ) ), 'INFO' );
         if ( $ids ) {
-            echo '<h2>' . esc_html__( 'OCR Results', 'pdf2p2' ) . '</h2>';
+            echo '<h2>OCR Results</h2>';
             foreach ( $ids as $post_id ) {
                 $result = pdf2p2_send_post_to_mistral_ocr( $post_id );
                 if ( is_wp_error( $result ) ) {
@@ -202,13 +266,13 @@ function pdf2p2_render_mistral_send_page() {
                        . esc_html( $result->get_error_message() ) 
                        . '</strong></p>';
                 } else {
-                    echo '<p>' . sprintf(
-
-                        esc_html__( '%1$s (ID %2$d) processed successfully.', 'pdf2p2' ),
-                        pdf2p2_log( sprintf( 'mistral-send.php — post %d processed successfully.', $post_id ), 'INFO' ),
-                        esc_html( get_the_title( $post_id ) ),
-                        intval( $post_id )
-                    ) . '</p>';
+                    pdf2p2_log( sprintf( 'mistral-send.php — post %d processed successfully.', $post_id ), 'INFO' );
+                    echo '<p>' . 
+                    sprintf('%1$s (ID %2$d) processed successfully.',                        
+                    esc_html( get_the_title( $post_id ) ),
+                    intval( $post_id )
+                    ) . 
+                    '</p>';
                 }
             }
         } else {

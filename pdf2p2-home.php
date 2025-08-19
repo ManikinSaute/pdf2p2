@@ -22,13 +22,15 @@ function render_pdf2p2_home_page() {
 
 	echo '<h2>Getting Started.</h2>';
 	echo '<p>Read the below to get a feel for how this plugin works.</p>';
-	echo '<ul> ';
+	echo '<ol> ';
+	echo '<li>This is a proof of concept (POC), this plugin is not yet production ready!</li>';
+	echo '<li>On first install the CRON will run with no API key set and import and process bunch of PDFs from the default RSS feed, you will want to delete these.</li>';
 	echo '<li>We have two Custom Post Types: pdf2p&sup2; Import and pdf2p&sup2; Posts.</li>';
-	echo '<li>Import is hidden and is where the processing takes place.</li>';
-	echo '<li>We have a Custom Taxonomy with the following terms: Un Verified, Human Verified and Staff Verified.</li>';
-	echo '<li>We have some speical post meta for example, Mistral Processed, and it is set to True or False.</li>';
+	echo '<li>Import is kept for debugging and is where the processing takes place, this should be empty.</li>';
+	echo '<li>We have a Custom Taxonomy with the following terms: Un Verified, Human Verified and Staff Verified, other tems are auto removed.</li>';
+	echo '<li>We have some speical post meta for example, Mistral Processed, HTML Processed, hashes etc.</li>';
 	echo '<li>We have some also save the original file URL which is sent to the OCR service and the hash of that file.</li>';
-	echo '</ul>';
+	echo '</ol>';
 
 	echo '<h2>How To Use This Plugin.</h2>';
 	echo '<p>Follow these steps to get started with the pdf2p2 plugin:</p>';
@@ -59,6 +61,8 @@ function render_pdf2p2_home_page() {
 	echo '<li><a href="' . esc_url($run_scripts_url) . '">Run Scripts page</a> to see if the scripts can be manully run.</li>';
 		echo '</ol>';
 
-	echo '<p>TO DO: There are still many things to, including tidying, sanatisation, escaping, caching, number-only-once-ing N3Cing (I refusing to write that) . More info can be seen <a href="' . esc_url($github_url) . '">here</a>.</li>';
+	echo '<p>TO DO: There are still many things to, including tidying, sanatisation, escaping, caching, number-only-once-ing N3Cing (I refusing to write that), removing old PDF files that are no longer needed. More info can be seen <a href="' . esc_url($github_url) . '">here</a>.</li>';
+	echo '<p>If this is intergrated with another system we will need a way to clean this system, ie remove attachemnts to reduce storge size etc.</p>';
+	echo '<p>When you need to change the RSS feed URL to BBC then back to Amnesty to get the value to save.</p>';
 	echo '</div>';
 }

@@ -101,7 +101,7 @@ function sideload_single_data_image_logged( string $data_uri, int $post_id ) {
         return false;
     }
     if (file_put_contents($tmp, $bin) === false) {
-        @unlink($tmp);
+        wp_delete_file($tmp);
         pdf2p2_log('sideload: write tmp failed', 'ERROR');
         return false;
     }
@@ -118,7 +118,7 @@ function sideload_single_data_image_logged( string $data_uri, int $post_id ) {
     remove_filter('big_image_size_threshold', '__return_zero', 99);
 
     if (is_wp_error($att_id)) {
-        @unlink($tmp);
+        wp_delete_file($tmp);
         pdf2p2_log('sideload: media_handle_sideload error: ' . $att_id->get_error_message(), 'ERROR');
         return false;
     }

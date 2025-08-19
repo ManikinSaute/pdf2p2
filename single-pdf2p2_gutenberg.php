@@ -1,6 +1,4 @@
 <?php
-// single-pdf2p2_gutenberg_custom.php
-// Clean template with richer sidebar metadata
 
 if ( ! defined( 'ABSPATH' ) ) { exit; }
 get_header();
@@ -11,20 +9,17 @@ $thumb_id       = get_post_thumbnail_id( $post_id );
 $archive_gb     = get_post_type_archive_link( 'pdf2p2_gutenberg' );
 $archive_import = get_post_type_archive_link( 'pdf2p2_import' );
 
-// Helper: safe value or em-dash
 $nz = function( $v ) {
     if ( is_string( $v ) ) { $v = trim( $v ); }
     return $v !== '' && $v !== null ? $v : '—';
 };
 
-// Helper: human reading time (rough, 200 wpm)
 $reading_time = function( $content ) {
     $words = str_word_count( wp_strip_all_tags( $content ) );
     $mins  = max( 1, (int) ceil( $words / 200 ) );
     return [ $words, $mins ];
 };
 
-// Attachment + size if we can reach the file
 $stored_url   = get_post_meta( $post_id, 'pdf2p2_new_file_url', true );
 $attach_id    = (int) get_post_meta( $post_id, 'pdf2p2_attachment_id', true );
 $attach_path  = $attach_id ? get_attached_file( $attach_id ) : '';
@@ -32,24 +27,17 @@ $attach_size  = ( $attach_path && file_exists( $attach_path ) ) ? size_format( f
 $orig_url     = get_post_meta( $post_id, 'pdf2p2_original_file_path', true );
 $file_hash    = get_post_meta( $post_id, 'pdf2p2_file_hash', true );
 
-// Processing flags
 $ocr_done     = get_post_meta( $post_id, 'mistral_processed', true ) ? 'Yes' : 'No';
 $html_done    = get_post_meta( $post_id, 'html_processed', true ) ? 'Yes' : 'No';
 $gb_done      = get_post_meta( $post_id, 'gb_processed', true ) ? 'Yes' : 'No';
 
-// Content stats
 list( $word_count, $mins ) = $reading_time( get_post_field( 'post_content', $post_id ) );
 
-// Terms (status taxonomy)
 $terms_status = get_the_terms( $post_id, 'status' );
 $terms_names  = $terms_status && ! is_wp_error( $terms_status ) ? implode( ', ', wp_list_pluck( $terms_status, 'name' ) ) : '—';
 
-// JSON endpoint
 $json_url = rest_url( "wp/v2/{$post_type}/{$post_id}" );
 
-// Optional cross-linking (if your plugin stores these)
-$import_pair_id    = (int) get_post_meta( $post_id, 'pdf2p2_import_id', true );     // GB -> import
-$gutenberg_pair_id = (int) get_post_meta( $post_id, 'pdf2p2_gutenberg_id', true );  // import -> GB
 ?>
 
 <main class="wp-block-group is-layout-flow wp-block-group-is-layout-flow" id="wp--skip-link--target">
@@ -82,32 +70,16 @@ $gutenberg_pair_id = (int) get_post_meta( $post_id, 'pdf2p2_gutenberg_id', true 
                                 </a>
                             </div>
                             <?php endif; ?>
-                            <?php if ( $archive_import ) : ?>
-                            <div class="wp-block-button is-style-light">
-                                <a class="wp-block-button__link wp-element-button" href="<?php echo esc_url( $archive_import ); ?>">
-                                    <span class="icon-arrow-left" aria-hidden="true"></span>
-                                    <span><?php esc_html_e( 'Back to Source PDFs', 'pdf2p2' ); ?></span>
-                                </a>
-                            </div>
-                            <?php endif; ?>
                         </div>
                     </div>
 
                     <div class="wp-block-group article-metaData is-layout-flow wp-block-group-is-layout-flow">
-                        <div class="publishedDate wp-block-post-date">
-                            <time datetime="<?php echo esc_attr( get_the_date( DATE_W3C ) ); ?>">
-                                <?php echo esc_html( get_the_date() ); ?>
-                            </time>
-                        </div>
                         <div class="modifiedDate">
                             <small><?php esc_html_e( 'Updated:', 'pdf2p2' ); ?>
                                 <time datetime="<?php echo esc_attr( get_the_modified_date( DATE_W3C ) ); ?>">
                                     <?php echo esc_html( get_the_modified_date() ); ?>
                                 </time>
                             </small>
-                        </div>
-                        <div class="byline">
-                            <small><?php esc_html_e( 'By', 'pdf2p2' ); ?> <?php the_author(); ?></small>
                         </div>
                         <div class="reading">
                             <small>
@@ -166,7 +138,7 @@ $gutenberg_pair_id = (int) get_post_meta( $post_id, 'pdf2p2_gutenberg_id', true 
                                 <strong><?php esc_html_e( 'Original PDF:', 'pdf2p2' ); ?></strong>
                                 <?php if ( $orig_url ) : ?>
                                     <a href="<?php echo esc_url( $orig_url ); ?>" target="_blank" rel="noopener">
-                                        <?php echo esc_html( wp_basename( parse_url( $orig_url, PHP_URL_PATH ) ) ); ?>
+                                        <?php echo esc_html( wp_basename( wp_parse_url( $orig_url, PHP_URL_PATH ) ) ); ?>
                                     </a>
                                 <?php else : ?>
                                     <?php echo esc_html( $nz('') ); ?>
@@ -176,7 +148,7 @@ $gutenberg_pair_id = (int) get_post_meta( $post_id, 'pdf2p2_gutenberg_id', true 
                                 <strong><?php esc_html_e( 'Stored File:', 'pdf2p2' ); ?></strong>
                                 <?php if ( $stored_url ) : ?>
                                     <a href="<?php echo esc_url( $stored_url ); ?>" target="_blank" rel="noopener">
-                                        <?php echo esc_html( wp_basename( parse_url( $stored_url, PHP_URL_PATH ) ) ); ?>
+                                        <?php echo esc_attr( wp_basename( wp_parse_url( $stored_url, PHP_URL_PATH ) ) ); ?>
                                     </a>
                                     <?php if ( $attach_size ) : ?>
                                         <small>(<?php echo esc_html( $attach_size ); ?>)</small>
@@ -194,19 +166,12 @@ $gutenberg_pair_id = (int) get_post_meta( $post_id, 'pdf2p2_gutenberg_id', true 
                         <h3 class="widget-title"><?php esc_html_e( 'Links', 'pdf2p2' ); ?></h3>
                         <ul class="wp-block-list">
                             <li><strong><?php esc_html_e( 'JSON:', 'pdf2p2' ); ?></strong> <a href="<?php echo esc_url( $json_url ); ?>" target="_blank" rel="noopener"><?php echo esc_html( $json_url ); ?></a></li>
-                            <?php if ( $import_pair_id ) : ?>
-                                <li><strong><?php esc_html_e( 'Source Import:', 'pdf2p2' ); ?></strong> <a href="<?php echo esc_url( get_permalink( $import_pair_id ) ); ?>"><?php echo esc_html( get_the_title( $import_pair_id ) ); ?></a></li>
-                            <?php endif; ?>
-                            <?php if ( $gutenberg_pair_id ) : ?>
-                                <li><strong><?php esc_html_e( 'Gutenberg Version:', 'pdf2p2' ); ?></strong> <a href="<?php echo esc_url( get_permalink( $gutenberg_pair_id ) ); ?>"><?php echo esc_html( get_the_title( $gutenberg_pair_id ) ); ?></a></li>
                             <?php endif; ?>
                             <?php if ( current_user_can( 'edit_post', $post_id ) ) : ?>
                                 <li><strong><?php esc_html_e( 'Edit:', 'pdf2p2' ); ?></strong> <a href="<?php echo esc_url( get_edit_post_link( $post_id ) ); ?>"><?php esc_html_e( 'Open editor', 'pdf2p2' ); ?></a></li>
                             <?php endif; ?>
                         </ul>
                     </div>
-
-                <?php endif; ?>
             </aside>
 
         </div>

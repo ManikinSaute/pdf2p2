@@ -55,14 +55,20 @@ function pdf2p2_list_gutenberg_posts_shortcode( $atts ) {
         </div>
 
         <div class="pagination" style="margin-top:1.5rem;">
-            <?php
-            echo paginate_links( [
-                'total'   => $query->max_num_pages,
-                'current' => $atts['paged'],
-                'prev_text' => '&laquo; ' . __( 'Previous', 'pdf2p2' ),
-                'next_text' => __( 'Next', 'pdf2p2' ) . ' &raquo;',
+
+
+        <?php
+            $pagination = paginate_links( [
+            'total'     => (int) $wp_query->max_num_pages,
+            'current'   => max( 1, (int) get_query_var( 'paged' ) ),
+            'prev_text' => '« Previous',
+            'next_text' => 'Next »',
             ] );
-            ?>
+
+            if ( $pagination ) {
+              echo wp_kses_post( $pagination );
+            };
+        ?>
         </div>
     <?php else : ?>
         <p><?php esc_html_e( 'No items found.', 'pdf2p2' ); ?></p>

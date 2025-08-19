@@ -2,7 +2,7 @@
 /*
 Plugin Name: pdf2p2
 Description: Converts PDFs to guttenberg posts from an XML feed
-Version:     1.9
+Version:     2.0.0
 Author:      Thomas Parsons
 Requires at least: 6.7
 Tested up to:      6.7

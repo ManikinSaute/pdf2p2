@@ -47,8 +47,6 @@ function pdf2p2_get_processed_post_ids(
         'no_found_rows'           => true,
         'update_post_meta_cache'  => false,
         'update_post_term_cache'  => false,
-        'ignore_sticky_posts'     => true,
-        'suppress_filters'        => true,
         'meta_query'              => [[
             'key'     => 'mistral_processed',
             'value'   => 1,               
@@ -109,6 +107,7 @@ function pdf2p2_render_mistral_page() {
         echo '<h2>Check A Post</h2>';
         echo '<p>Enter one or more post IDs (comma-separated):</p>';
         echo '<form method="post" style="margin-top:20px;">';
+        WP_nonce_field( 'pdf2p2_mistral', 'pdf2p2_mistral_nonce' );
         echo '  <label for="check_post_ids">Post IDs:</label> ';
         echo '  <input type="text" name="check_post_ids" id="check_post_ids" ';
         echo '         placeholder="e.g. 12,34,56" style="width:200px;" />';
@@ -117,8 +116,11 @@ function pdf2p2_render_mistral_page() {
         echo '</div>';
 
         if ( isset($_POST['check_post_ids']) ) {
-            // turn "12, 34,56" into [12,34,56]
-            $raw   = sanitize_text_field( $_POST['check_post_ids'] );
+            if ( ! check_admin_referer( 'pdf2p2_mistral', 'pdf2p2_mistral_nonce' ) ) {
+                echo '<div class="notice notice-error"><p>Invalid nonce. Please try again.</p></div>';
+                return;
+            }
+            $raw   = sanitize_text_field( wp_unslash($_POST) ['check_post_ids'] );
             $parts = array_filter( array_map( 'intval', explode( ',', $raw ) ) );
 
             foreach ( $parts as $post_id ) {
@@ -160,7 +162,7 @@ function pdf2p2_render_mistral_page() {
                      &mdash; Type: %4$s | Published: %5$s | Process Status: %6$s</li>',
                     esc_url( $edit_url ),
                     esc_html( $title ),
-                    $post_id,
+                    esc_html( $post_id ),
                     esc_html( $type ),
                     esc_html( $date ),
                     esc_html( $processed_label )
