@@ -1,5 +1,5 @@
 {
-  "landingPage": "/wp-admin/",
+  "landingPage": "/wp-admin/admin.php?page=pdf2p2-home",
   "login": true,
   "phpExtensionBundles": [
         "kitchen-sink"
