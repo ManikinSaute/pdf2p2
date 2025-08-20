@@ -1,4 +1,4 @@
-name: Zip and Commit   
+name: Zip and Commit     
 permissions:
   contents: write
 
