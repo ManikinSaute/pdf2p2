@@ -67,6 +67,14 @@ There was already a “PDF2Post” plugin, so we shortened and evolved it into *
 
 ---
 
+
+## Demo & Test
+
+- Open the [latest version](https://playground.wordpress.net/?blueprint-url=https://raw.githubusercontent.com/ManikinSaute/pdf2p2/main/blueprint.json ) in playground!
+- You can edit the [blue print here ](https://github.com/ManikinSaute/pdf2p2/blob/main/blueprint.json    )
+- You can [test edits to a blue print here](https://playground.wordpress.net/builder/builder.html   ) 
+- If a commit to main contains the word "zip-it" the Zip file will be created and the playground link will be updated to run the code from main.
+
 ## Thanks  
 
 Thanks for checking out **pdf2p2** 
